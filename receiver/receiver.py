@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import hmac
 import json
@@ -78,11 +79,18 @@ class Inbox:
         self.export()
         self.cleanup_completed()
 
+    @contextmanager
     def connect(self):
+        # Commit, then always close: launchd allows only 256 descriptors, and an unclosed
+        # connection holds two (database and WAL) until garbage collection.
         db = sqlite3.connect(self.db, timeout=30)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA synchronous=FULL")
-        return db
+        try:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA synchronous=FULL")
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def receipt(self, chunk_id: str):
         with self.connect() as db:
@@ -130,11 +138,12 @@ class Inbox:
                 body = clean_transcript(row["transcript"])
                 if not body:
                     continue
-                # Keep one continuous document, with only an hourly capture marker.
+                # One continuous document: an hourly marker, and each clip prefixed by its capture minute.
                 local = datetime.fromisoformat(row["started"].replace("Z", "+00:00")).astimezone(self.tz)
                 offset = local.strftime("%z")
                 marker = local.strftime("%Y-%m-%d %H:00") + f" (UTC{offset[:3]}:{offset[3:]})"
-                grouped.setdefault(local.date().isoformat(), {}).setdefault(marker, []).append(body)
+                grouped.setdefault(local.date().isoformat(), {}).setdefault(marker, []).append(
+                    f"[{local:%H:%M}] {body}")
             for day, hours in grouped.items():
                 sections = []
                 for marker, bodies in hours.items():
@@ -237,7 +246,7 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(201 if new else 200, {"id": chunk_id, "sha256": digest, "durable": True})
         except (ValueError, OverflowError, TimeoutError):
             self.respond(400, {"error": "Invalid or incomplete chunk"})
-        except OSError:
+        except (OSError, sqlite3.Error):
             self.respond(503, {"error": "Storage temporarily unavailable"})
         finally:
             if tmp:
@@ -320,9 +329,14 @@ def worker(inbox: Inbox, stop: threading.Event, model: Path, whisper: str, ffmpe
     work = inbox.root / "processing"
     work.mkdir(exist_ok=True, mode=0o700)
     while not stop.is_set():
-        with inbox.connect() as db:
-            row = db.execute("SELECT * FROM chunks WHERE status='pending' AND retry_at<=? ORDER BY started LIMIT 1",
-                             (time.time(),)).fetchone()
+        try:
+            with inbox.connect() as db:
+                row = db.execute("SELECT * FROM chunks WHERE status='pending' AND retry_at<=? ORDER BY started LIMIT 1",
+                                 (time.time(),)).fetchone()
+        except sqlite3.Error:
+            # A storage error must not end transcription for good; the queue is durable.
+            stop.wait(5)
+            continue
         if not row:
             stop.wait(2)
             continue
@@ -332,10 +346,13 @@ def worker(inbox: Inbox, stop: threading.Event, model: Path, whisper: str, ffmpe
         except Exception as error:
             # Keep the audio and retry. Error type only; external-tool output is private.
             attempts = row["attempts"] + 1
-            with inbox.connect() as db:
-                db.execute("UPDATE chunks SET attempts=?,retry_at=?,error=? WHERE id=?",
-                           (attempts, time.time() + min(3600, 15 * 2 ** min(attempts, 8)),
-                            type(error).__name__, row["id"]))
+            try:
+                with inbox.connect() as db:
+                    db.execute("UPDATE chunks SET attempts=?,retry_at=?,error=? WHERE id=?",
+                               (attempts, time.time() + min(3600, 15 * 2 ** min(attempts, 8)),
+                                type(error).__name__, row["id"]))
+            except sqlite3.Error:
+                stop.wait(5)
 
 
 def main():

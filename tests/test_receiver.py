@@ -1,7 +1,9 @@
 from datetime import timezone
+import gc
 import hashlib
 import http.client
 import json
+import os
 from pathlib import Path
 import socket
 import sys
@@ -130,6 +132,19 @@ class ReceiverTests(unittest.TestCase):
         self.assertIn(b"400", response)
         self.assertIsNone(self.inbox.receipt(chunk_id))
 
+    def test_database_connections_do_not_leak_file_descriptors(self):
+        # launchd gives the receiver 256 descriptors; leaked handles once stopped uploads and transcription.
+        gc.disable()  # Garbage collection must not be what closes connections.
+        try:
+            before = len(os.listdir("/dev/fd"))
+            for _ in range(300):
+                self.inbox.receipt(str(uuid.uuid4()))
+                self.inbox.status()
+            after = len(os.listdir("/dev/fd"))
+        finally:
+            gc.enable()
+        self.assertLess(after - before, 10)
+
     def test_day_files_and_markers_use_local_capture_time(self):
         inbox = Inbox(Path(self.temp.name) / "taipei", ZoneInfo("Asia/Taipei"))
         tmp = inbox.audio / "clip.upload"
@@ -138,8 +153,7 @@ class ReceiverTests(unittest.TestCase):
         inbox.accept(tmp, chunk_id, "0" * 64, self.device, "2026-09-09T16:30:00.000Z", 60.0)
         inbox.complete(chunk_id, "午夜的會議。")
         day = (inbox.days / "2026-09-10.md").read_text()
-        self.assertIn("### 2026-09-10 00:00 (UTC+08:00)", day)
-        self.assertIn("午夜的會議。", day)
+        self.assertIn("### 2026-09-10 00:00 (UTC+08:00)\n\n[00:30] 午夜的會議。", day)
         self.assertFalse((inbox.days / "2026-09-09.md").exists())
 
 
