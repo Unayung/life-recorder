@@ -75,8 +75,8 @@ atomic_write(root / "launch-arguments.json", json.dumps(command).encode())
 if args.install_agent:
     agents = Path.home() / "Library" / "LaunchAgents"
     agents.mkdir(parents=True, exist_ok=True)
-    agent = agents / "com.browseruse.life-recorder.receiver.plist"
-    payload = {"Label": "com.browseruse.life-recorder.receiver", "ProgramArguments": command,
+    agent = agents / "com.unayung.life-recorder.receiver.plist"
+    payload = {"Label": "com.unayung.life-recorder.receiver", "ProgramArguments": command,
                "RunAtLoad": True, "KeepAlive": True, "ThrottleInterval": 10,
                "WorkingDirectory": str(root), "Umask": 0o077,
                "StandardOutPath": str(root / "receiver.log"), "StandardErrorPath": str(root / "receiver-error.log")}
@@ -87,11 +87,11 @@ if args.install_agent:
     else:
         atomic_write(agent, plistlib.dumps(payload))
     domain = f"gui/{os.getuid()}"
-    running = subprocess.run(["launchctl", "print", domain + "/com.browseruse.life-recorder.receiver"],
+    running = subprocess.run(["launchctl", "print", domain + "/com.unayung.life-recorder.receiver"],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if running.returncode != 0:
         subprocess.run(["launchctl", "bootstrap", domain, str(agent)], check=True)
-    subprocess.run(["launchctl", "kickstart", domain + "/com.browseruse.life-recorder.receiver"], check=True)
+    subprocess.run(["launchctl", "kickstart", domain + "/com.unayung.life-recorder.receiver"], check=True)
     print("Mac receiver configured to start at login.")
 print(f"Receiver prepared: {url}")
 print(f"Private pairing page: {root / 'pairing.html'}")

@@ -1,6 +1,6 @@
 name: LifeRecorder
 options:
-  bundleIdPrefix: com.browseruse
+  bundleIdPrefix: com.unayung
   deploymentTarget:
     iOS: '17.0'
 settings:
@@ -8,6 +8,7 @@ settings:
     SWIFT_VERSION: '5.0'
     TARGETED_DEVICE_FAMILY: '1'
     CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: WZFJ4E5LPD
 targets:
   LifeRecorder:
     type: application
@@ -15,7 +16,7 @@ targets:
     sources: [LifeRecorder]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.browseruse.liferecorder
+        PRODUCT_BUNDLE_IDENTIFIER: com.unayung.liferecorder
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: LifeRecorder/Info.plist
     scheme:

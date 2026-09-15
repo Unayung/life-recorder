@@ -99,7 +99,7 @@ enum QueueStore {
 }
 
 enum Credentials {
-    private static let service = "com.browseruse.liferecorder.receiver"
+    private static let service = "com.unayung.liferecorder.receiver"
     static func token() -> String {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service, kSecAttrAccount as String: "token",

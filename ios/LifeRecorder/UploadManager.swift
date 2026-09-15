@@ -6,7 +6,7 @@ import UIKit
 
 final class UploadManager: NSObject, ObservableObject, URLSessionDataDelegate, URLSessionTaskDelegate {
     static let shared = UploadManager()
-    static let sessionID = "com.browseruse.liferecorder.uploads"
+    static let sessionID = "com.unayung.liferecorder.uploads"
     @Published private(set) var pendingCount = 0
     @Published private(set) var status = "Pair with your Mac to upload"
     @Published private(set) var lastUploadedAt: Date?
