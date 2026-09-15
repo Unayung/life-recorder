@@ -6,7 +6,8 @@ A native iPhone recorder and private Mac receiver. The iPhone records approximat
 
 - macOS with Xcode and an Apple developer account capable of installing a development build on the iPhone
 - iPhone running a supported iOS version, with Developer Mode enabled for development installation
-- Python 3.10+, `ffmpeg`, `whisper-cli` from whisper.cpp, and a downloaded GGML Whisper model
+- Python 3.10+, `ffmpeg`, `whisper-cli` from whisper.cpp, and a downloaded GGML Whisper model ([Breeze ASR 25](https://huggingface.co/MediaTek-Research/Breeze-ASR-25) suits Taiwanese Mandarin mixed with English terms)
+- Optionally, the Silero VAD model from whisper.cpp's `models/download-vad-model.sh`, which skips silence before transcription
 - A reachable HTTPS path between phone and Mac (same LAN by default; use a private VPN for cellular access)
 
 ## Build and install
@@ -27,9 +28,13 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 ```sh
 python3 receiver/setup.py \
   --data-dir /absolute/private/runtime \
-  --model /absolute/path/to/ggml-small.bin \
+  --model /absolute/path/to/ggml-breeze-asr-25.bin \
+  --vad-model /absolute/path/to/ggml-silero-vad.bin \
+  --language zh --prompt "PR, deploy, staging" \
   --install-agent
 ```
+
+`--language` defaults to `zh`; pass `auto` for automatic detection. `--prompt` is a vocabulary hint for names and technical terms you often say. Transcript dates and hourly markers use this Mac's time zone (override with `--timezone Asia/Taipei`); the database keeps UTC.
 
 Setup creates a random bearer token, a self-signed TLS certificate, and a private pairing page in the data directory. Open that page only on the intended iPhone. The token is stored in the iPhone Keychain and in the private Mac runtime; it is ignored by Git. The receiver binds an authenticated upload endpoint and does not expose transcript downloads or arbitrary Mac access.
 
@@ -39,7 +44,7 @@ The receiver writes the combined transcript to `life.md` in the data directory. 
 
 Tap the recorder switch once. Recording continues while the screen is locked and while other apps are used. If the iPhone is rebooted or the app is force-quit, iOS requires opening Life Recorder once before microphone capture can resume. Pending audio remains on the phone until the receiver acknowledges it. Upload tasks are retried and stale connectivity tasks are cancelled so they cannot hold the queue indefinitely.
 
-Whisper runs locally on the Mac. The receiver removes common stage-direction markers and highly repetitive hallucinated noise, then writes one continuous document with an hourly capture marker. This is cleanup, not a guarantee of perfect transcription.
+Whisper runs locally on the Mac. The receiver removes common stage-direction markers, subtitle-credit hallucinations (such as Amara.org credits) and highly repetitive hallucinated noise, then writes one continuous document with an hourly capture marker. This is cleanup, not a guarantee of perfect transcription.
 
 ## Using Codex to reproduce the setup
 

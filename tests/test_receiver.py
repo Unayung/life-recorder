@@ -1,3 +1,4 @@
+from datetime import timezone
 import hashlib
 import http.client
 import json
@@ -7,16 +8,19 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import uuid
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "receiver"))
-from receiver import Handler, Inbox, Receiver
+import receiver
+from receiver import Handler, Inbox, Receiver, clean_transcript, transcribe
 
 
 class ReceiverTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.inbox = Inbox(Path(self.temp.name))
+        self.inbox = Inbox(Path(self.temp.name), timezone.utc)
         self.server = Receiver(("127.0.0.1", 0), Handler)
         self.server.inbox = self.inbox
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -125,6 +129,51 @@ class ReceiverTests(unittest.TestCase):
             response = client.recv(4096)
         self.assertIn(b"400", response)
         self.assertIsNone(self.inbox.receipt(chunk_id))
+
+    def test_day_files_and_markers_use_local_capture_time(self):
+        inbox = Inbox(Path(self.temp.name) / "taipei", ZoneInfo("Asia/Taipei"))
+        tmp = inbox.audio / "clip.upload"
+        tmp.write_bytes(b"audio")
+        chunk_id = str(uuid.uuid4())
+        inbox.accept(tmp, chunk_id, "0" * 64, self.device, "2026-09-09T16:30:00.000Z", 60.0)
+        inbox.complete(chunk_id, "午夜的會議。")
+        day = (inbox.days / "2026-09-10.md").read_text()
+        self.assertIn("### 2026-09-10 00:00 (UTC+08:00)", day)
+        self.assertIn("午夜的會議。", day)
+        self.assertFalse((inbox.days / "2026-09-09.md").exists())
+
+
+class TranscriptionTests(unittest.TestCase):
+    def test_subtitle_credit_and_repeated_hallucinations_removed(self):
+        for text in ("字幕由Amara.org社區提供", "请不吝点赞 订阅 转发 打赏支持明镜与点点栏目",
+                     "謝謝觀看!", "感謝收看。", "thank you thank you thank you",
+                     "我們下次再見 我們下次再見 我們下次再見", "<|12.34|><|56.78|>", "[BLANK_AUDIO]"):
+            self.assertEqual(clean_transcript(text), "", text)
+
+    def test_code_switched_speech_kept(self):
+        for text in ("這個 PR 先 deploy 到 staging, 好 下次再見", "謝謝觀看的人都有回饋"):
+            self.assertEqual(clean_transcript(text), text)
+        self.assertEqual(clean_transcript("[音樂] 字幕由Amara.org社區提供 我們開始吧"), "我們開始吧")
+
+    def test_whisper_command_uses_language_vad_and_prompt(self):
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command[0] == "whisper-cli":
+                prefix = Path(command[command.index("-of") + 1])
+                prefix.with_suffix(".json").write_text(json.dumps(
+                    {"transcription": [{"text": "這個 PR"}, {"text": "先 deploy"}]}))
+
+        with tempfile.TemporaryDirectory() as work, mock.patch.object(receiver.subprocess, "run", fake_run):
+            text = transcribe({"id": "clip", "path": "clip.m4a"}, Path("breeze.bin"), Path(work),
+                              "whisper-cli", "ffmpeg", vad_model=Path("vad.bin"), prompt="PR, deploy")
+        self.assertEqual(text, "這個 PR 先 deploy")
+        whisper = commands[1]
+        self.assertEqual(whisper[whisper.index("-l") + 1], "zh")
+        self.assertEqual(whisper[whisper.index("-vm") + 1], "vad.bin")
+        self.assertIn("--vad", whisper)
+        self.assertEqual(whisper[whisper.index("--prompt") + 1], "PR, deploy")
 
 
 if __name__ == "__main__":

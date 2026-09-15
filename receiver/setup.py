@@ -8,6 +8,7 @@ import os
 import plistlib
 from pathlib import Path
 import shlex
+import shutil
 import socket
 import ssl
 import subprocess
@@ -18,10 +19,17 @@ from receiver import Inbox, atomic_write
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--data-dir", type=Path, required=True)
-parser.add_argument("--model", type=Path, required=True)
+parser.add_argument("--model", type=Path, required=True, help="GGML Whisper model, such as Breeze ASR 25")
+parser.add_argument("--language", default="zh", help="Whisper language code, or auto")
+parser.add_argument("--vad-model", type=Path, help="whisper.cpp Silero VAD model; skips silence")
+parser.add_argument("--prompt", help="Vocabulary hint, such as names and technical terms")
+parser.add_argument("--timezone", help="IANA zone for transcript dates; defaults to this Mac's")
 parser.add_argument("--url", help="Reachable HTTPS URL; defaults to this Mac's .local hostname")
 parser.add_argument("--install-agent", action="store_true", help="Start the Mac receiver at login using launchd")
 args = parser.parse_args()
+whisper, ffmpeg = shutil.which("whisper-cli"), shutil.which("ffmpeg")
+if not whisper or not ffmpeg:
+    parser.error("Install whisper-cli and ffmpeg first: brew install whisper-cpp ffmpeg")
 os.umask(0o077)
 root = args.data_dir.resolve()
 inbox = Inbox(root)
@@ -54,7 +62,13 @@ atomic_write(root / "pairing.html", page.encode())
 command = [sys.executable, str(Path(__file__).with_name("receiver.py").resolve()),
            "--data-dir", str(root), "--host", "0.0.0.0", "--port", str(parsed.port or 443),
            "--cert", str(cert), "--key", str(key), "--model", str(args.model.resolve()),
-           "--whisper", "/opt/homebrew/bin/whisper-cli", "--ffmpeg", "/opt/homebrew/bin/ffmpeg"]
+           "--language", args.language, "--whisper", whisper, "--ffmpeg", ffmpeg]
+if args.vad_model:
+    command += ["--vad-model", str(args.vad_model.resolve())]
+if args.prompt:
+    command += ["--prompt", args.prompt]
+if args.timezone:
+    command += ["--timezone", args.timezone]
 atomic_write(root / "start-receiver.command", ("#!/bin/zsh\nexec " + shlex.join(command) + "\n").encode())
 os.chmod(root / "start-receiver.command", 0o700)
 atomic_write(root / "launch-arguments.json", json.dumps(command).encode())

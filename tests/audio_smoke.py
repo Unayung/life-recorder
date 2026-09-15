@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as scratch:
     thread.start()
     stop = threading.Event()
     worker_thread = threading.Thread(target=worker, args=(inbox, stop, args.model.resolve(),
-        "/opt/homebrew/bin/whisper-cli", "/opt/homebrew/bin/ffmpeg"), daemon=True)
+        "/opt/homebrew/bin/whisper-cli", "/opt/homebrew/bin/ffmpeg"), kwargs={"language": "en"}, daemon=True)
     worker_thread.start()
     chunk_id = str(uuid.uuid4())
     payload = clip.read_bytes()
