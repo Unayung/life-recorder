@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import ssl
 import sys
 import tempfile
 import threading
@@ -91,11 +92,11 @@ class ReceiverTests(unittest.TestCase):
 
     def test_offline_backlog_is_exported_by_capture_time(self):
         _, _, later = self.upload(started="2026-09-10T16:00:00.000Z")
-        self.inbox.complete(later, "Later audio.")
+        self.inbox.complete(later, "Later audio arrived.")
         _, _, earlier = self.upload(started="2026-09-09T16:00:00.000Z")
-        self.inbox.complete(earlier, "Earlier audio.")
+        self.inbox.complete(earlier, "Earlier audio arrived.")
         text = (self.inbox.root / "life.md").read_text()
-        self.assertLess(text.index("Earlier audio."), text.index("Later audio."))
+        self.assertLess(text.index("Earlier audio arrived."), text.index("Later audio arrived."))
         self.assertTrue((self.inbox.days / "2026-09-09.md").exists())
         self.assertTrue((self.inbox.days / "2026-09-10.md").exists())
 
@@ -168,6 +169,32 @@ class TranscriptionTests(unittest.TestCase):
         for text in ("這個 PR 先 deploy 到 staging, 好 下次再見", "謝謝觀看的人都有回饋"):
             self.assertEqual(clean_transcript(text), text)
         self.assertEqual(clean_transcript("[音樂] 字幕由Amara.org社區提供 我們開始吧"), "我們開始吧")
+
+    def test_lone_latin_words_dropped_but_short_chinese_replies_kept(self):
+        # Observed in a real afternoon of recording: lone words decoded from background noise.
+        for text in ("Send", "CNN.", "batch host", "inter-tool.js", "staging,"):
+            self.assertEqual(clean_transcript(text), "", text)
+        for text in ("好", "沒錯", "好 好", "shall we see."):
+            self.assertEqual(clean_transcript(text), text)
+
+    def test_long_phrase_loop_collapsed_but_emphasis_kept(self):
+        self.assertEqual(clean_transcript("重點我們下午再確認一次我們下午再確認一次我們下午再確認一次欸我現在"),
+                         "重點我們下午再確認一次欸我現在")
+        for text in ("成 model 要換要換要換要換你已經有決定了喔", "它就會在背景一直錄一直錄一直錄一直錄錄音",
+                     "填什麼之類的 blah blah blah blah 所以大家都用這個"):
+            self.assertEqual(clean_transcript(text), text)
+
+    def test_response_to_disconnected_phone_is_silent(self):
+        class Disconnected:
+            def write(self, data):
+                raise ssl.SSLEOFError("EOF occurred in violation of protocol")
+
+        handler = Handler.__new__(Handler)
+        handler.request_version = "HTTP/1.1"
+        handler.requestline = "POST /v1/chunks/x HTTP/1.1"
+        handler.wfile = Disconnected()
+        handler.respond(400, {"error": "Invalid or incomplete chunk"})  # Must not raise.
+        self.assertTrue(handler.close_connection)
 
     def test_whisper_command_uses_language_vad_and_prompt(self):
         commands = []

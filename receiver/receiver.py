@@ -181,12 +181,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def respond(self, status: int, payload: dict):
         body = json.dumps(payload).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Connection", "close")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass  # The phone disconnected mid-upload; it retries anything unacknowledged.
         self.close_connection = True
 
     def authorized(self):
@@ -322,7 +325,12 @@ def clean_transcript(text: str) -> str:
         return ""
     if not any(ch.isalnum() for ch in text):
         return ""
-    return " ".join(words)
+    # A whole clip of one or two Latin words ("Send", "CNN.") is noise decoded as speech;
+    # real clips are Mandarin with English terms. Short Chinese replies ("好") are kept.
+    if len(words) <= 2 and not re.search(r"[㐀-鿿]", text):
+        return ""
+    # Collapse a decoder loop of a longer phrase; short repeats ("要換要換") are natural emphasis.
+    return re.sub(r"(\S{4,20}?)\1{2,}", r"\1", " ".join(words))
 
 
 def worker(inbox: Inbox, stop: threading.Event, model: Path, whisper: str, ffmpeg: str, **options):
