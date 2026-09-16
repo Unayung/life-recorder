@@ -34,7 +34,7 @@ python3 receiver/setup.py \
   --install-agent
 ```
 
-`--language` defaults to `zh`; pass `auto` for automatic detection. `--prompt` is a vocabulary hint for names and technical terms you often say. Transcript dates and hourly markers use this Mac's time zone (override with `--timezone Asia/Taipei`); the database keeps UTC.
+`--language` defaults to `zh`; pass `auto` for automatic detection. `--prompt` is a vocabulary hint for names and technical terms you often say, and `--vocabulary` points at a glossary file whose `提示詞用` section is read before every clip, so editing that file takes effect without restarting the receiver. Keep the glossary in the private data directory: it names people and customers. Transcript dates and hourly markers use this Mac's time zone (override with `--timezone Asia/Taipei`); the database keeps UTC.
 
 Setup creates a random bearer token, a self-signed TLS certificate, and a private pairing page in the data directory. Open that page only on the intended iPhone. The token is stored in the iPhone Keychain and in the private Mac runtime; it is ignored by Git. The receiver binds an authenticated upload endpoint and does not expose transcript downloads or arbitrary Mac access.
 

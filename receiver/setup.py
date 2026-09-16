@@ -23,6 +23,7 @@ parser.add_argument("--model", type=Path, required=True, help="GGML Whisper mode
 parser.add_argument("--language", default="zh", help="Whisper language code, or auto")
 parser.add_argument("--vad-model", type=Path, help="whisper.cpp Silero VAD model; skips silence")
 parser.add_argument("--prompt", help="Vocabulary hint, such as names and technical terms")
+parser.add_argument("--vocabulary", type=Path, help="Glossary file read before each clip; its 提示詞用 section is the prompt")
 parser.add_argument("--timezone", help="IANA zone for transcript dates; defaults to this Mac's")
 parser.add_argument("--url", help="Reachable HTTPS URL; defaults to this Mac's .local hostname")
 parser.add_argument("--install-agent", action="store_true", help="Start the Mac receiver at login using launchd")
@@ -67,6 +68,8 @@ if args.vad_model:
     command += ["--vad-model", str(args.vad_model.resolve())]
 if args.prompt:
     command += ["--prompt", args.prompt]
+if args.vocabulary:
+    command += ["--vocabulary", str(args.vocabulary.resolve())]
 if args.timezone:
     command += ["--timezone", args.timezone]
 atomic_write(root / "start-receiver.command", ("#!/bin/zsh\nexec " + shlex.join(command) + "\n").encode())

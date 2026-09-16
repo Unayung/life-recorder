@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "receiver"))
 import receiver
-from receiver import Handler, Inbox, Receiver, clean_transcript, transcribe
+from receiver import Handler, Inbox, Receiver, clean_transcript, load_vocabulary, transcribe
 
 
 class ReceiverTests(unittest.TestCase):
@@ -195,6 +195,37 @@ class TranscriptionTests(unittest.TestCase):
         handler.wfile = Disconnected()
         handler.respond(400, {"error": "Invalid or incomplete chunk"})  # Must not raise.
         self.assertTrue(handler.close_connection)
+
+    def test_vocabulary_file_supplies_only_its_prompt_section(self):
+        with tempfile.TemporaryDirectory() as home:
+            glossary = Path(home) / "vocabulary.md"
+            glossary.write_text("# 詞彙表\n\n說明文字，提示詞用在下一節。\n\n## 提示詞用（精簡版）\n\n"
+                                "Aurora, Nova AI, 小明\noutbound, 外撥\n\n## 人名\n\n| 正確 | 角色 |\n",
+                                encoding="utf-8")
+            self.assertEqual(load_vocabulary(glossary), "Aurora, Nova AI, 小明 outbound, 外撥")
+            long_terms = Path(home) / "long.md"
+            long_terms.write_text("## 提示詞用\n\n" + "詞, " * 500, encoding="utf-8")
+            self.assertLessEqual(len(load_vocabulary(long_terms)), 800)
+        # A missing or unreadable glossary must never stop transcription.
+        self.assertEqual(load_vocabulary(Path("/nonexistent/vocabulary.md")), "")
+        self.assertEqual(load_vocabulary(None), "")
+
+    def test_glossary_terms_are_appended_to_the_prompt(self):
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command[0] == "whisper-cli":
+                prefix = Path(command[command.index("-of") + 1])
+                prefix.with_suffix(".json").write_text(json.dumps({"transcription": [{"text": "Aurora"}]}))
+
+        with tempfile.TemporaryDirectory() as work, mock.patch.object(receiver.subprocess, "run", fake_run):
+            glossary = Path(work) / "vocabulary.md"
+            glossary.write_text("## 提示詞用\n\nAurora, 小明\n", encoding="utf-8")
+            transcribe({"id": "clip", "path": "clip.m4a"}, Path("breeze.bin"), Path(work),
+                       "whisper-cli", "ffmpeg", prompt="PR, deploy", vocabulary=glossary)
+        whisper = commands[1]
+        self.assertEqual(whisper[whisper.index("--prompt") + 1], "PR, deploy, Aurora, 小明")
 
     def test_whisper_command_uses_language_vad_and_prompt(self):
         commands = []

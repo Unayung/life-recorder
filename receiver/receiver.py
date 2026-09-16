@@ -260,8 +260,31 @@ class Receiver(ThreadingHTTPServer):
     daemon_threads = True
 
 
+def load_vocabulary(path: Path | None) -> str:
+    """Read the prompt-sized section of the vocabulary file, if it is readable."""
+    if not path:
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""  # An unreadable glossary must not stop transcription.
+    section, collecting = [], False
+    for line in text.splitlines():
+        if line.startswith("#"):
+            if collecting:
+                break
+            collecting = "提示詞" in line or "prompt" in line.lower()
+            continue
+        if collecting and line.strip() and not line.startswith("---"):
+            section.append(line.strip())
+    terms = " ".join(section) if section else " ".join(text.split())
+    # whisper.cpp accepts n_text_ctx/2 tokens; keep well inside that.
+    return terms[:800]
+
+
 def transcribe(row, model: Path, work: Path, whisper: str, ffmpeg: str,
-               language: str = "zh", vad_model: Path | None = None, prompt: str | None = None):
+               language: str = "zh", vad_model: Path | None = None, prompt: str | None = None,
+               vocabulary: Path | None = None):
     wav = work / (row["id"] + ".wav")
     prefix = work / row["id"]
     result_file = prefix.with_suffix(".json")
@@ -274,8 +297,10 @@ def transcribe(row, model: Path, work: Path, whisper: str, ffmpeg: str,
         if vad_model:
             # Silence costs large-model time and is where Whisper hallucinates most.
             command += ["--vad", "-vm", str(vad_model)]
-        if prompt:
-            command += ["--prompt", prompt]
+        # Read the glossary for every clip, so edits to it take effect without a restart.
+        hint = ", ".join(part for part in (prompt, load_vocabulary(vocabulary)) if part)
+        if hint:
+            command += ["--prompt", hint]
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
         # whisper.cpp can emit a non-UTF-8 byte in otherwise valid JSON for
         # hallucinated noise. Replacement keeps the clip processable.
@@ -376,6 +401,8 @@ def main():
     parser.add_argument("--language", default="zh", help="Whisper language code, or auto")
     parser.add_argument("--vad-model", type=Path, help="whisper.cpp Silero VAD model; skips silence")
     parser.add_argument("--prompt", help="Vocabulary hint, such as names and technical terms")
+    parser.add_argument("--vocabulary", type=Path,
+                        help="Glossary file read before each clip; its 提示詞用 section becomes the prompt")
     parser.add_argument("--timezone", help="IANA zone for transcript dates; defaults to this Mac's")
     parser.add_argument("--init", action="store_true", help="Create the inbox, then exit")
     args = parser.parse_args()
@@ -394,7 +421,10 @@ def main():
         parser.error("Transcription requires an existing model, whisper-cli, and ffmpeg")
     if args.vad_model and not args.vad_model.is_file():
         parser.error("--vad-model must be an existing file")
-    options = {"language": args.language, "vad_model": args.vad_model, "prompt": args.prompt}
+    if args.vocabulary and not args.vocabulary.is_file():
+        parser.error("--vocabulary must be an existing file")
+    options = {"language": args.language, "vad_model": args.vad_model, "prompt": args.prompt,
+               "vocabulary": args.vocabulary}
     server = Receiver((args.host, args.port), Handler)
     server.inbox = inbox
     if args.cert and args.key:
