@@ -46,6 +46,14 @@ python3 receiver/setup.py \
 
 Setup creates a random bearer token, a self-signed TLS certificate, and a private pairing page in the data directory. Open that page only on the intended iPhone. The token is stored in the iPhone Keychain and in the private Mac runtime; it is ignored by Git. The receiver binds an authenticated upload endpoint and does not expose transcript downloads or arbitrary Mac access.
 
+## Reading days back on the phone
+
+The app's "Read your days" page lists every recorded date and opens one day at a time. It reads two authenticated endpoints, `GET /v1/days` and `GET /v1/days/<YYYY-MM-DD>`, over the same pinned HTTPS connection the uploads use, and keeps the last answer on the phone so a day stays readable when the Mac is asleep.
+
+A day shows its summary when one exists, otherwise the transcript. Summaries are Markdown files you (or an assistant reading the transcript) write to `summaries/<YYYY-MM-DD>.md` in the data directory; nothing generates them automatically.
+
+Note what this changes: the pairing token could previously only upload audio. It can now also read transcripts and summaries, so treat it as a key to the transcript itself.
+
 The receiver writes the combined transcript to `life.md` in the data directory. It can be placed anywhere, including `~/Documents/life.md`, by moving that file and leaving a symlink at the runtime path.
 
 ## Recording behavior

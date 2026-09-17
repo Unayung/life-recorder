@@ -146,6 +146,40 @@ class ReceiverTests(unittest.TestCase):
             gc.enable()
         self.assertLess(after - before, 10)
 
+    def get(self, path, token=None):
+        client = http.client.HTTPConnection(*self.server.server_address, timeout=5)
+        client.request("GET", path, headers={"Authorization": "Bearer " + (token or self.inbox.token)})
+        response = client.getresponse()
+        result = response.status, json.loads(response.read())
+        client.close()
+        return result
+
+    def test_day_index_lists_dates_newest_first_and_flags_summaries(self):
+        for started, text in (("2026-09-09T16:00:00.000Z", "早上的會議。"),
+                              ("2026-09-10T16:00:00.000Z", "下午的討論。")):
+            _, _, chunk_id = self.upload(started=started)
+            self.inbox.complete(chunk_id, text)
+        (self.inbox.summaries / "2026-09-10.md").write_text("# 2026-09-10\n\n重點是上線時程。\n")
+        status, payload = self.get("/v1/days")
+        self.assertEqual(status, 200)
+        self.assertEqual([day["date"] for day in payload["days"]], ["2026-09-10", "2026-09-09"])
+        self.assertTrue(payload["days"][0]["summarized"])
+        self.assertFalse(payload["days"][1]["summarized"])
+
+    def test_day_document_prefers_the_summary_and_keeps_the_transcript(self):
+        _, _, chunk_id = self.upload(started="2026-09-10T16:00:00.000Z")
+        self.inbox.complete(chunk_id, "下午的討論。")
+        (self.inbox.summaries / "2026-09-10.md").write_text("重點是上線時程。")
+        status, payload = self.get("/v1/days/2026-09-10")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["summary"], "重點是上線時程。")
+        self.assertIn("下午的討論。", payload["transcript"])
+
+    def test_reading_requires_the_token_and_rejects_odd_dates(self):
+        self.assertEqual(self.get("/v1/days", token="wrong")[0], 401)
+        for path in ("/v1/days/2026-13-45", "/v1/days/../../etc/passwd", "/v1/days/2026-09-10.md"):
+            self.assertEqual(self.get(path)[0], 404, path)
+
     def test_day_files_and_markers_use_local_capture_time(self):
         inbox = Inbox(Path(self.temp.name) / "taipei", ZoneInfo("Asia/Taipei"))
         tmp = inbox.audio / "clip.upload"

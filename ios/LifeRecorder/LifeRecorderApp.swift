@@ -95,6 +95,19 @@ struct ContentView: View {
                                 .foregroundStyle(.orange)
                         }
                     }
+                    NavigationLink {
+                        DayListView()
+                    } label: {
+                        HStack {
+                            Label("Read your days", systemImage: "book")
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                        }
+                        .font(.headline).padding(.vertical, 14).padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 18))
+                    }
+                    .buttonStyle(.plain)
                     Text("Records with the screen locked. After restarting the phone or force-quitting, open this app once to resume. Switching off stays off.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)

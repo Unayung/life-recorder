@@ -60,6 +60,9 @@ class Inbox:
         self.audio.mkdir(exist_ok=True, mode=0o700)
         self.days = self.root / "days"
         self.days.mkdir(exist_ok=True, mode=0o700)
+        # Summaries are written here by hand or by an assistant; the phone reads them back.
+        self.summaries = self.root / "summaries"
+        self.summaries.mkdir(exist_ok=True, mode=0o700)
         self.db = self.root / "inbox.sqlite3"
         self.lock = threading.RLock()
         token_file = self.root / "receiver.token"
@@ -163,6 +166,36 @@ class Inbox:
             return {row["status"]: row["n"] for row in db.execute(
                 "SELECT status,count(*) AS n FROM chunks GROUP BY status")}
 
+    def day_index(self):
+        """Days that have a transcript or a summary, newest first, for the phone's list."""
+        dates = {path.stem for path in self.days.glob("20??-??-??.md")}
+        dates |= {path.stem for path in self.summaries.glob("20??-??-??.md")}
+        days = []
+        for date in sorted(dates, reverse=True):
+            written = [path.stat().st_mtime for path in
+                       (self.days / (date + ".md"), self.summaries / (date + ".md")) if path.is_file()]
+            days.append({
+                "date": date,
+                "summarized": (self.summaries / (date + ".md")).is_file(),
+                "updated": datetime.fromtimestamp(max(written), timezone.utc)
+                                   .isoformat(timespec="seconds").replace("+00:00", "Z"),
+            })
+        return days
+
+    def day_document(self, date: str):
+        """The summary for a day when one has been written, always with the transcript."""
+        transcript = self.days / (date + ".md")
+        summary = self.summaries / (date + ".md")
+        if not transcript.is_file() and not summary.is_file():
+            return None
+        return {
+            "date": date,
+            "summary": summary.read_text(encoding="utf-8", errors="replace") if summary.is_file() else None,
+            # Bounded so one long day cannot hand the phone an unbounded response.
+            "transcript": (transcript.read_text(encoding="utf-8", errors="replace")[:512 * 1024]
+                           if transcript.is_file() else ""),
+        }
+
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -199,9 +232,21 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.authorized():
             return self.respond(401, {"error": "Unauthorized"})
-        if self.path != "/health":
-            return self.respond(404, {"error": "Not found"})
-        self.respond(200, {"ok": True, "chunks": self.inbox.status()})
+        path = urlparse(self.path).path
+        if path == "/health":
+            return self.respond(200, {"ok": True, "chunks": self.inbox.status()})
+        if path == "/v1/days":
+            return self.respond(200, {"days": self.inbox.day_index()})
+        if path.startswith("/v1/days/"):
+            try:
+                # strptime rejects anything that is not a plain date, path traversal included.
+                date = datetime.strptime(path.removeprefix("/v1/days/"), "%Y-%m-%d").strftime("%Y-%m-%d")
+            except ValueError:
+                return self.respond(404, {"error": "Not found"})
+            document = self.inbox.day_document(date)
+            if document:
+                return self.respond(200, document)
+        self.respond(404, {"error": "Not found"})
 
     def do_POST(self):
         if not self.authorized():

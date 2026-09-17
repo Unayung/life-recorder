@@ -12,6 +12,7 @@
 		49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */; };
 		54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
 		548DE3A98498B0B10E21540F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53B3827423B97E0166CF2964 /* Assets.xcassets */; };
+		608D204380302040F6F27CDE /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741E03E5D6FC0A34C88CEA4D /* Reading.swift */; };
 		8C34593B9CD5B393F7C90C6D /* NativeUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A0E11377963676F1DB20DB /* NativeUploadTests.swift */; };
 		C87128C9329B9A638C31BF46 /* RecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */; };
 		E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35B1754886B3F5500411113 /* Recorder.swift */; };
@@ -35,6 +36,7 @@
 		4912CAE16CD5C6C2B739463D /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		53B3827423B97E0166CF2964 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		73A0E11377963676F1DB20DB /* NativeUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadTests.swift; sourceTree = "<group>"; };
+		741E03E5D6FC0A34C88CEA4D /* Reading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reading.swift; sourceTree = "<group>"; };
 		7C47086B1533C94C651B4CCF /* LifeRecorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LifeRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderTests.swift; sourceTree = "<group>"; };
 		979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkWriter.swift; sourceTree = "<group>"; };
@@ -49,6 +51,7 @@
 				979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */,
 				248F26ABAF4F063BA289ED46 /* Info.plist */,
 				39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */,
+				741E03E5D6FC0A34C88CEA4D /* Reading.swift */,
 				B35B1754886B3F5500411113 /* Recorder.swift */,
 				1E138E288F79C8B5DE281250 /* Storage.swift */,
 				4912CAE16CD5C6C2B739463D /* UploadManager.swift */,
@@ -179,6 +182,7 @@
 			files = (
 				1F2B7EE6A773F6B72AC416FA /* ChunkWriter.swift in Sources */,
 				49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */,
+				608D204380302040F6F27CDE /* Reading.swift in Sources */,
 				E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */,
 				54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */,
 				066F079475FA4272323846E7 /* UploadManager.swift in Sources */,

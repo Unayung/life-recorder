@@ -180,6 +180,33 @@ final class UploadManager: NSObject, ObservableObject, URLSessionDataDelegate, U
 
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
                     completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        PinnedTransport.verify(challenge, completionHandler)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        PinnedTransport.verify(challenge, completionHandler)
+    }
+
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        let completion = backgroundCompletion
+        backgroundCompletion = nil
+        completion?()
+    }
+}
+
+/// The pinned connection to the Mac, shared by uploads and by reading days back.
+final class PinnedTransport: NSObject, URLSessionDelegate {
+    static let shared = PinnedTransport()
+
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        PinnedTransport.verify(challenge, completionHandler)
+    }
+
+    static func verify(_ challenge: URLAuthenticationChallenge,
+                       _ completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = challenge.protectionSpace.serverTrust,
               let settings = ReceiverSettings.load(),
@@ -200,17 +227,5 @@ final class UploadManager: NSObject, ObservableObject, URLSessionDataDelegate, U
         if hash == settings.certificateSHA256 {
             completionHandler(.useCredential, URLCredential(trust: trust))
         } else { completionHandler(.cancelAuthenticationChallenge, nil) }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        urlSession(session, didReceive: challenge, completionHandler: completionHandler)
-    }
-
-    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-        let completion = backgroundCompletion
-        backgroundCompletion = nil
-        completion?()
     }
 }
