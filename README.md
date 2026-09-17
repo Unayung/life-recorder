@@ -14,7 +14,15 @@ A native iPhone recorder and private Mac receiver. The iPhone records approximat
 
 Open `ios/LifeRecorder.xcodeproj` in Xcode, select the connected iPhone, choose your Apple development team, and Build and Run. The app requests microphone and local-network access. Keep the source tree free of runtime credentials.
 
-For command-line builds, use an Apple development team and the connected device identifier:
+To build and install without opening Xcode, connect the iPhone and run:
+
+```sh
+scripts/install-iphone.sh
+```
+
+It regenerates the project when `ios/project.yml` has changed, picks the one connected iPhone (`--device NAME` when several are attached), builds with your team, installs, and launches the app. `--build-only` and `--no-launch` stop earlier. Signing needs the login keychain, so run it from Terminal on an unlocked Mac.
+
+For a plain command-line build, use an Apple development team and the connected device identifier:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
