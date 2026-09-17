@@ -93,7 +93,11 @@ struct DayListView: View {
                 Section { Text(store.status).foregroundStyle(.secondary) }
             }
             ForEach(store.days) { day in
-                NavigationLink(value: day) {
+                // The destination is built here rather than routed by value: a
+                // navigationDestination registered inside a pushed view can fail to match.
+                NavigationLink {
+                    DayDetailView(store: store, day: day)
+                } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(Self.title(for: day.date)).font(.headline)
                         HStack(spacing: 6) {
@@ -108,7 +112,6 @@ struct DayListView: View {
             }
         }
         .navigationTitle("Days")
-        .navigationDestination(for: DaySummary.self) { day in DayDetailView(store: store, day: day) }
         .refreshable { await store.refresh() }
         .overlay { if store.loading && store.days.isEmpty { ProgressView() } }
         .task { await store.refresh() }
