@@ -45,6 +45,11 @@ final class Recorder: ObservableObject {
             })
     }
 
+    func discardDamagedClips() {
+        QueueStore.removeDamaged()
+        incompleteClips = 0
+    }
+
     func setEnabled(_ value: Bool) async {
         enabled = value
         UserDefaults.standard.set(value, forKey: "recorderEnabled")

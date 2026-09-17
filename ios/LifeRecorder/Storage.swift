@@ -63,20 +63,45 @@ enum QueueStore {
         return chunk
     }
 
+    static let damagedDirectory: URL = directory.appendingPathComponent("Damaged", isDirectory: true)
+
+    /// Clips whose audio could not be read; kept as bytes, not counted as pending work.
+    static func damagedCount() -> Int {
+        let files = (try? FileManager.default.contentsOfDirectory(at: damagedDirectory, includingPropertiesForKeys: nil)) ?? []
+        return files.filter { $0.pathExtension == "m4a" }.count
+    }
+
+    static func removeDamaged() {
+        try? FileManager.default.removeItem(at: damagedDirectory)
+    }
+
+    private static func setAside(_ journal: URL, _ audio: URL) {
+        // An unfinished AAC file has no index, so nothing can decode it. Keep the bytes
+        // out of the way instead of asking for a recovery that cannot happen.
+        try? FileManager.default.createDirectory(at: damagedDirectory, withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        for file in [journal, audio] where FileManager.default.fileExists(atPath: file.path) {
+            try? FileManager.default.moveItem(at: file, to: damagedDirectory.appendingPathComponent(file.lastPathComponent))
+        }
+    }
+
     static func recoverInterruptedFiles() async -> Int {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        var unrecoverable = 0
         for file in files where file.lastPathComponent.hasSuffix(".recording.json") {
-            do {
-                let journal = try JSONDecoder().decode(RecordingJournal.self, from: Data(contentsOf: file))
-                let audio = directory.appendingPathComponent(journal.id.uuidString.lowercased() + ".m4a")
-                let duration = try await AVURLAsset(url: audio).load(.duration).seconds
-                guard duration.isFinite && duration > 0 else { unrecoverable += 1; continue }
-                _ = try seal(journal, duration: duration)
-            } catch {
-                // Keep an incomplete file for recovery; never pretend it was uploaded.
-                unrecoverable += 1
+            guard let journal = try? JSONDecoder().decode(RecordingJournal.self, from: Data(contentsOf: file)) else {
+                try? FileManager.default.removeItem(at: file)  // A journal we cannot read names nothing.
+                continue
             }
+            let audio = directory.appendingPathComponent(journal.id.uuidString.lowercased() + ".m4a")
+            guard FileManager.default.fileExists(atPath: audio.path) else {
+                try? FileManager.default.removeItem(at: file)  // No audio was ever written.
+                continue
+            }
+            let duration = (try? await AVURLAsset(url: audio).load(.duration).seconds) ?? .nan
+            if duration.isFinite, duration > 0, (try? seal(journal, duration: duration)) != nil {
+                continue
+            }
+            setAside(file, audio)
         }
         // Removal of an acknowledged manifest is the local commit point. Finish cleanup after a crash.
         for audio in files where audio.pathExtension == "m4a" {
@@ -86,7 +111,7 @@ enum QueueStore {
                 try? FileManager.default.removeItem(at: audio)
             }
         }
-        return unrecoverable
+        return damagedCount()
     }
 
     static func removeAcknowledged(_ chunk: Chunk) throws {

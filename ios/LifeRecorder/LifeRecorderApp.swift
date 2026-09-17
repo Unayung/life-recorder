@@ -91,8 +91,14 @@ struct ContentView: View {
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                         if recorder.incompleteClips > 0 {
-                            Text("\(recorder.incompleteClips) interrupted clips need recovery. They remain on this phone.")
-                                .foregroundStyle(.orange)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("\(recorder.incompleteClips) clip\(recorder.incompleteClips == 1 ? "" : "s") could not be read. Cut off mid-recording, they have no index, so nothing can decode them. The audio is kept aside, not uploaded.")
+                                    .foregroundStyle(.orange)
+                                Button("Delete unreadable audio", role: .destructive) {
+                                    recorder.discardDamagedClips()
+                                }
+                                .font(.footnote)
+                            }
                         }
                     }
                     NavigationLink {
