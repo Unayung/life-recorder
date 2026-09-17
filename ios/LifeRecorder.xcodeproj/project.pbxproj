@@ -11,6 +11,7 @@
 		1F2B7EE6A773F6B72AC416FA /* ChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */; };
 		49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */; };
 		54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
+		548DE3A98498B0B10E21540F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53B3827423B97E0166CF2964 /* Assets.xcassets */; };
 		8C34593B9CD5B393F7C90C6D /* NativeUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A0E11377963676F1DB20DB /* NativeUploadTests.swift */; };
 		C87128C9329B9A638C31BF46 /* RecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */; };
 		E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35B1754886B3F5500411113 /* Recorder.swift */; };
@@ -32,6 +33,7 @@
 		248F26ABAF4F063BA289ED46 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeRecorderApp.swift; sourceTree = "<group>"; };
 		4912CAE16CD5C6C2B739463D /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
+		53B3827423B97E0166CF2964 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		73A0E11377963676F1DB20DB /* NativeUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadTests.swift; sourceTree = "<group>"; };
 		7C47086B1533C94C651B4CCF /* LifeRecorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LifeRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderTests.swift; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 		2413F16E452318A11E779BB2 /* LifeRecorder */ = {
 			isa = PBXGroup;
 			children = (
+				53B3827423B97E0166CF2964 /* Assets.xcassets */,
 				979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */,
 				248F26ABAF4F063BA289ED46 /* Info.plist */,
 				39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */,
@@ -106,6 +109,7 @@
 			buildConfigurationList = 3D116A3BB9D8B5A57901C1B4 /* Build configuration list for PBXNativeTarget "LifeRecorder" */;
 			buildPhases = (
 				D1085235C0176EDF1C1C5AC2 /* Sources */,
+				6A2A5FCDDD0A7416627B676A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -128,9 +132,11 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					B783F8B8E7C1A2E6020AAA56 = {
+						DevelopmentTeam = WZFJ4E5LPD;
 						ProvisioningStyle = Automatic;
 					};
 					DBE1F1D5E440E3A72A76DA1C = {
+						DevelopmentTeam = WZFJ4E5LPD;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -154,6 +160,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6A2A5FCDDD0A7416627B676A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				548DE3A98498B0B10E21540F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D1085235C0176EDF1C1C5AC2 /* Sources */ = {
@@ -273,9 +290,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WZFJ4E5LPD;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = WZFJ4E5LPD;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -332,9 +349,9 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = WZFJ4E5LPD;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = WZFJ4E5LPD;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
