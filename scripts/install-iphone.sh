@@ -54,6 +54,8 @@ for device in devices:
     hardware = device.get("hardwareProperties", {})
     if connection.get("transportType") == "sameMachine" or hardware.get("platform") != "iOS":
         continue
+    if connection.get("pairingState") != "paired":
+        continue
     real.append({
         "name": device["deviceProperties"].get("name", "?"),
         "identifier": device["identifier"],
@@ -62,16 +64,16 @@ for device in devices:
     })
 if wanted:
     real = [d for d in real if wanted in (d["name"], d["identifier"], d["udid"])]
-connected = [d for d in real if d["state"] == "connected"]
-if len(connected) == 1:
-    print(connected[0]["identifier"], connected[0]["name"], sep="\t")
+# devicectl opens its tunnel on demand, so a paired device still reports
+# "disconnected" until something talks to it; prefer a live one, settle for paired.
+chosen = [d for d in real if d["state"] == "connected"] or real
+if len(chosen) == 1:
+    print(chosen[0]["identifier"], chosen[0]["name"], sep="\t")
     sys.exit(0)
-if not real:
+if not chosen:
     print("NONE", file=sys.stderr)
-elif not connected:
-    print("DISCONNECTED\t" + ", ".join(d["name"] for d in real), file=sys.stderr)
 else:
-    print("AMBIGUOUS\t" + ", ".join(d["name"] for d in connected), file=sys.stderr)
+    print("AMBIGUOUS\t" + ", ".join(d["name"] for d in chosen), file=sys.stderr)
 sys.exit(1)
 PY
 }
@@ -85,10 +87,8 @@ if ! picked="$(pick_device "$devices_json" "$device" 2>"$devices_json.err")"; th
   detail="$(cut -f2 "$devices_json.err" 2>/dev/null || true)"
   rm -f "$devices_json.err"
   case "$reason" in
-    DISCONNECTED) echo "iPhone found but not reachable ($detail)." >&2
-                  echo "Connect it by USB or put it on this Wi-Fi, then unlock it." >&2 ;;
-    AMBIGUOUS)    echo "Several iPhones are connected ($detail); pass --device NAME." >&2 ;;
-    *)            echo "No paired iPhone found. Connect it by USB and trust this Mac." >&2 ;;
+    AMBIGUOUS) echo "Several iPhones are paired ($detail); pass --device NAME." >&2 ;;
+    *)         echo "No paired iPhone found. Connect it by USB, unlock it and trust this Mac." >&2 ;;
   esac
   exit 1
 fi
