@@ -18,9 +18,14 @@ struct DayDocument: Codable {
 /// so the phone still shows something when the Mac is asleep or out of reach.
 @MainActor
 final class SummaryStore: ObservableObject {
+    /// One store for the whole app, so a sync started when the app opens is the same
+    /// one the reading page shows.
+    static let shared = SummaryStore()
+
     @Published private(set) var days: [DaySummary] = []
     @Published private(set) var status = ""
     @Published private(set) var loading = false
+    @Published private(set) var lastSynced: Date? = UserDefaults.standard.object(forKey: "readingLastSynced") as? Date
 
     private let cache: URL = {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -44,10 +49,20 @@ final class SummaryStore: ObservableObject {
         return decoder
     }()
 
-    init() {
+    private lazy var encoder: JSONEncoder = {
+        // Must match the decoder: a default encoder writes dates as numbers, which the
+        // ISO-8601 decoder rejects, and the saved list came back empty offline.
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
+    private init() {
         days = (try? decoder.decode([DaySummary].self, from: Data(contentsOf: cache.appendingPathComponent("days.json")))) ?? []
     }
 
+    /// Fetch the day list and every day that changed since it was saved, so the whole
+    /// archive stays readable on the phone when the Mac is out of reach.
     func refresh() async {
         guard !loading else { return }
         loading = true
@@ -55,12 +70,28 @@ final class SummaryStore: ObservableObject {
         do {
             let data = try await get("v1/days")
             struct Index: Codable { let days: [DaySummary] }
-            days = try decoder.decode(Index.self, from: data).days
-            try? JSONEncoder().encode(days).write(to: cache.appendingPathComponent("days.json"), options: .atomic)
-            status = days.isEmpty ? "No days recorded yet" : ""
+            let fresh = try decoder.decode(Index.self, from: data).days
+            days = fresh
+            try? encoder.encode(fresh).write(to: cache.appendingPathComponent("days.json"), options: .atomic)
+            for day in fresh where isStale(day) {
+                if let document = try? await get("v1/days/\(day.date)") {
+                    try? document.write(to: cache.appendingPathComponent(day.date + ".json"), options: .atomic)
+                }
+            }
+            lastSynced = Date()
+            UserDefaults.standard.set(lastSynced, forKey: "readingLastSynced")
+            status = fresh.isEmpty ? "No days recorded yet" : ""
         } catch {
-            status = days.isEmpty ? "Cannot reach your Mac" : "Showing what was downloaded earlier"
+            status = days.isEmpty ? "Cannot reach your Mac, and nothing is saved on this phone yet"
+                                  : "Offline — showing the copies saved on this phone"
         }
+    }
+
+    private func isStale(_ day: DaySummary) -> Bool {
+        let file = cache.appendingPathComponent(day.date + ".json")
+        guard let saved = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.modificationDate] as? Date
+        else { return true }
+        return saved < day.updated
     }
 
     func document(for date: String) async -> DayDocument? {
@@ -85,12 +116,19 @@ final class SummaryStore: ObservableObject {
 }
 
 struct DayListView: View {
-    @StateObject private var store = SummaryStore()
+    @ObservedObject private var store = SummaryStore.shared
 
     var body: some View {
         List {
-            if !store.status.isEmpty {
-                Section { Text(store.status).foregroundStyle(.secondary) }
+            Section {
+                if !store.status.isEmpty {
+                    Text(store.status).foregroundStyle(.secondary)
+                }
+                if let synced = store.lastSynced {
+                    Label("Saved on this phone · synced \(synced.formatted(date: .abbreviated, time: .shortened))",
+                          systemImage: "arrow.down.circle")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
             ForEach(store.days) { day in
                 // The destination is built here rather than routed by value: a

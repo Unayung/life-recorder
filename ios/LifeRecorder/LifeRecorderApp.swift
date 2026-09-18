@@ -23,11 +23,19 @@ struct LifeRecorderApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(recorder: recorder, uploads: uploads, showSettings: $showSettings)
-                .task { uploads.activate(); await recorder.resumeIfEnabled() }
+                .task {
+                    uploads.activate()
+                    await recorder.resumeIfEnabled()
+                    // Keep every day readable offline: pull whatever changed while away.
+                    await SummaryStore.shared.refresh()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
                         uploads.activate()
-                        Task { await recorder.resumeIfEnabled() }
+                        Task {
+                            await recorder.resumeIfEnabled()
+                            await SummaryStore.shared.refresh()
+                        }
                     }
                 }
                 .onOpenURL { url in
