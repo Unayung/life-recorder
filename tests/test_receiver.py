@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import socket
 import ssl
+import subprocess
 import sys
 import tempfile
 import threading
@@ -190,6 +191,29 @@ class ReceiverTests(unittest.TestCase):
         day = (inbox.days / "2026-09-10.md").read_text()
         self.assertIn("### 2026-09-10 00:00 (UTC+08:00)\n\n[00:30] 午夜的會議。", day)
         self.assertFalse((inbox.days / "2026-09-09.md").exists())
+
+
+class TLSTests(unittest.TestCase):
+    def test_silent_client_does_not_block_other_handshakes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            cert, key = Path(temp, "c.pem"), Path(temp, "k.pem")
+            subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
+                            "-subj", "/CN=test", "-keyout", key, "-out", cert],
+                           check=True, capture_output=True)
+            server = Receiver(("127.0.0.1", 0), Handler)
+            server.inbox = Inbox(Path(temp), timezone.utc)
+            receiver.enable_tls(server, cert, key)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            stalled = socket.create_connection(server.server_address)  # connects, never says hello
+            try:
+                client = http.client.HTTPSConnection(*server.server_address, timeout=5,
+                                                     context=ssl._create_unverified_context())
+                client.request("GET", "/health")
+                self.assertEqual(client.getresponse().status, 401)
+            finally:
+                stalled.close()
+                server.shutdown()
+                server.server_close()
 
 
 class TranscriptionTests(unittest.TestCase):

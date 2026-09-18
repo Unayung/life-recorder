@@ -207,6 +207,8 @@ class Handler(BaseHTTPRequestHandler):
     def setup(self):
         super().setup()
         self.connection.settimeout(60)
+        if isinstance(self.connection, ssl.SSLSocket):
+            self.connection.do_handshake()  # Here, not in accept(): a silent client stalls only its own thread.
 
     @property
     def inbox(self) -> Inbox:
@@ -303,6 +305,13 @@ class Handler(BaseHTTPRequestHandler):
 
 class Receiver(ThreadingHTTPServer):
     daemon_threads = True
+
+
+def enable_tls(server: Receiver, cert, key):
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(cert, key)
+    server.socket = context.wrap_socket(server.socket, server_side=True, do_handshake_on_connect=False)
 
 
 def load_vocabulary(path: Path | None) -> str:
@@ -473,10 +482,7 @@ def main():
     server = Receiver((args.host, args.port), Handler)
     server.inbox = inbox
     if args.cert and args.key:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        context.load_cert_chain(args.cert, args.key)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
+        enable_tls(server, args.cert, args.key)
     stop = threading.Event()
     if args.model:
         threading.Thread(target=worker, args=(inbox, stop, args.model, args.whisper, args.ffmpeg),
