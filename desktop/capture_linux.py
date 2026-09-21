@@ -3,6 +3,9 @@
 
 Recording starts when a meeting app (browser, Slack, Zoom) opens the microphone and stops
 30 seconds after it lets go, so videos and music outside calls are never captured.
+
+While a game is running the microphone alone is recorded, so the room's conversation is kept
+without the game's own noise.
 """
 import argparse
 from datetime import datetime, timezone
@@ -18,6 +21,7 @@ import time
 import uuid
 
 MEETING_APPS = ("msedge", "chromium", "chrome", "brave", "firefox", "slack", "zoom")
+GAMES = ("net.minecraft.client.main.main", "prismlauncher", "minecraft")
 GRACE_SECONDS = 30  # A muted mic or a rejoin shouldn't split one meeting into two recordings.
 
 
@@ -32,12 +36,29 @@ def meeting_app_using_mic(apps) -> bool:
     return False
 
 
-def start_recording(spool: Path) -> subprocess.Popen:
+def game_running(games) -> bool:
+    """True while a game is running, so the room is recorded even though nothing opens the microphone."""
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit() or int(entry.name) == os.getpid():
+            continue
+        try:
+            command = entry.joinpath("cmdline").read_bytes().decode("utf-8", "replace").lower()
+        except OSError:  # The process ended while we were looking at it.
+            continue
+        if any(game in command for game in games):
+            return True
+    return False
+
+
+def start_recording(spool: Path, speakers: bool = True) -> subprocess.Popen:
     # Segment names carry the UTC start time; the uploader turns them into X-Started-At.
+    sources = ["-f", "pulse", "-i", "default"]
+    mix = []
+    if speakers:
+        sources += ["-f", "pulse", "-i", "@DEFAULT_MONITOR@"]
+        mix = ["-filter_complex", "amix=inputs=2:duration=longest:normalize=0"]
     return subprocess.Popen(
-        ["ffmpeg", "-loglevel", "error", "-nostdin",
-         "-f", "pulse", "-i", "default", "-f", "pulse", "-i", "@DEFAULT_MONITOR@",
-         "-filter_complex", "amix=inputs=2:duration=longest:normalize=0", "-ac", "1", "-ar", "16000",
+        ["ffmpeg", "-loglevel", "error", "-nostdin", *sources, *mix, "-ac", "1", "-ar", "16000",
          "-c:a", "aac", "-b:a", "64k", "-f", "segment", "-segment_time", "60", "-segment_format", "ipod",
          "-reset_timestamps", "1", "-strftime", "1", str(spool / "%Y-%m-%dT%H-%M-%S.m4a")],
         env={**os.environ, "TZ": "UTC"})
@@ -86,8 +107,10 @@ def main():
     parser.add_argument("--data-dir", type=Path, default=Path.home() / ".local/share/life-recorder")
     parser.add_argument("--receiver", default="127.0.0.1:8765")
     parser.add_argument("--apps", default=",".join(MEETING_APPS), help="comma-separated mic-client names")
+    parser.add_argument("--games", default=",".join(GAMES), help="comma-separated game command names")
     args = parser.parse_args()
     apps = tuple(a.strip().lower() for a in args.apps.split(",") if a.strip())
+    games = tuple(g.strip().lower() for g in args.games.split(",") if g.strip())
     spool = args.data_dir / "desktop-spool"
     spool.mkdir(mode=0o700, exist_ok=True)
     device_file = args.data_dir / "desktop-device-id"
@@ -95,20 +118,30 @@ def main():
         device_file.write_text(str(uuid.uuid4()))
     device = device_file.read_text().strip()
 
-    recorder, last_seen = None, 0.0
+    def end_recording(reason: str):
+        nonlocal recorder, mode
+        recorder.send_signal(signal.SIGINT)  # Lets ffmpeg finish the last segment cleanly.
+        recorder.wait()
+        recorder, mode = None, None
+        print(reason, flush=True)
+
+    recorder, mode, last_seen = None, None, 0.0
     stop = []
     signal.signal(signal.SIGTERM, lambda *_: stop.append(1))
     while not stop:
-        if meeting_app_using_mic(apps):
+        # A meeting wins over a game: in a call both sides are worth keeping.
+        wanted = "meeting" if meeting_app_using_mic(apps) else "game" if game_running(games) else None
+        if wanted:
             last_seen = time.monotonic()
+            if recorder and mode != wanted:
+                end_recording(f"{mode} gave way to a {wanted}")
             if recorder is None:
-                print("meeting started, recording", flush=True)
-                recorder = start_recording(spool)
+                mode = wanted
+                recorder = start_recording(spool, speakers=wanted == "meeting")
+                print(f"{wanted} started, recording{'' if wanted == 'meeting' else ' the microphone only'}",
+                      flush=True)
         elif recorder and time.monotonic() - last_seen > GRACE_SECONDS:
-            recorder.send_signal(signal.SIGINT)  # Lets ffmpeg finish the last segment cleanly.
-            recorder.wait()
-            recorder = None
-            print("meeting ended, stopped", flush=True)
+            end_recording(f"{mode} ended, stopped")
         segments = sorted(spool.glob("*.m4a"))
         if recorder:
             segments = segments[:-1]  # The newest file is still being written.
