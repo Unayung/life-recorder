@@ -61,9 +61,13 @@ final class Recorder: ObservableObject {
     }
 
     func resumeIfEnabled(allowBackground: Bool = false) async {
+        // Opening the app is the user asking for the microphone back. iOS often never says an
+        // interruption ended (it outlived the app being suspended), so don't wait for that word.
+        let active = UIApplication.shared.applicationState == .active
+        if active { interrupted = false }
         guard enabled, !recording, !starting, !stopping, !interrupted else { return }
         // Background upload completion must never start a new microphone session.
-        guard allowBackground || UIApplication.shared.applicationState == .active else { return }
+        guard allowBackground || active else { return }
         starting = true
         defer { starting = false }
         if !recovered {
@@ -143,10 +147,10 @@ final class Recorder: ObservableObject {
             if enabled { status = "Interrupted by another audio session" }
         } else {
             interrupted = false
-            let rawOptions = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
-            if AVAudioSession.InterruptionOptions(rawValue: rawOptions).contains(.shouldResume) {
-                await resumeIfEnabled(allowBackground: true)
-            } else if enabled { status = "Recording paused. Reopen the app to resume." }
+            // Try even when iOS doesn't ask us to resume: whoever took the microphone has let go,
+            // and failing here only costs one attempt.
+            await resumeIfEnabled(allowBackground: true)
+            if enabled && !recording { status = "Recording paused. Reopen the app to resume." }
         }
     }
 }
