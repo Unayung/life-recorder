@@ -204,11 +204,19 @@ struct DayDetailView: View {
                                 ForEach(section.blocks) { block in BlockView(block: block) }
                             } header: {
                                 if let heading = section.heading {
-                                    BlockView(block: heading)
-                                        .id(heading.id)
-                                        .padding(.vertical, 6)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(.background)
+                                    HStack(alignment: .firstTextBaseline) {
+                                        BlockView(block: heading)
+                                        Spacer(minLength: 12)
+                                        // Share one part of the day without sending the whole of it.
+                                        ShareLink(item: markdown(of: section)) {
+                                            Image(systemName: "square.and.arrow.up").font(.footnote)
+                                        }
+                                        .foregroundStyle(.secondary)
+                                    }
+                                    .id(heading.id)
+                                    .padding(.vertical, 6)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.background)
                                 }
                             }
                         }
@@ -260,8 +268,29 @@ struct DayDetailView: View {
         blocks.filter { if case .heading(_, let level) = $0.kind { return level <= 3 } else { return false } }
     }
 
+    /// One section's Markdown, headed by the day it belongs to.
+    private func markdown(of section: DaySection) -> String {
+        let whole = allSections.first { $0.id == section.id } ?? section
+        let parts = [DayListView.title(for: day.date), whole.heading?.markdown]
+            + whole.blocks.map(\.markdown)
+        return parts.compactMap { $0 }.joined(separator: "\n\n")
+    }
+
     /// Blocks grouped under the heading they follow, with the search filter applied to the body.
     private var sections: [DaySection] {
+        let sections = allSections
+        guard !query.isEmpty else { return sections.filter { $0.heading != nil || !$0.blocks.isEmpty } }
+        let needle = query.lowercased()
+        return sections.compactMap { section in
+            let matches = section.blocks.filter { $0.plainText.lowercased().contains(needle) }
+            let headingMatches = section.heading?.plainText.lowercased().contains(needle) ?? false
+            guard !matches.isEmpty || headingMatches else { return nil }
+            return DaySection(id: section.id, heading: section.heading,
+                              blocks: headingMatches && matches.isEmpty ? section.blocks : matches)
+        }
+    }
+
+    private var allSections: [DaySection] {
         var sections: [DaySection] = []
         var current = DaySection(id: -1, heading: nil, blocks: [])
         for block in blocks {
@@ -273,15 +302,7 @@ struct DayDetailView: View {
             }
         }
         sections.append(current)
-        guard !query.isEmpty else { return sections.filter { $0.heading != nil || !$0.blocks.isEmpty } }
-        let needle = query.lowercased()
-        return sections.compactMap { section in
-            let matches = section.blocks.filter { $0.plainText.lowercased().contains(needle) }
-            let headingMatches = section.heading?.plainText.lowercased().contains(needle) ?? false
-            guard !matches.isEmpty || headingMatches else { return nil }
-            return DaySection(id: section.id, heading: section.heading,
-                              blocks: headingMatches && matches.isEmpty ? section.blocks : matches)
-        }
+        return sections
     }
 }
 
@@ -311,6 +332,16 @@ struct Block: Identifiable {
         case .paragraph(let text), .bullet(let text): return text
         case .entry(let time, let text): return "\(time) \(text)"
         case .table(let rows): return rows.first?.joined(separator: " ") ?? ""
+        }
+    }
+
+    var markdown: String {
+        switch kind {
+        case .heading(let text, let level): return String(repeating: "#", count: level) + " " + text
+        case .paragraph(let text): return text
+        case .bullet(let text): return "- " + text
+        case .entry(let time, let text): return "[\(time)] \(text)"
+        case .table(let rows): return rows.map { "| " + $0.joined(separator: " | ") + " |" }.joined(separator: "\n")
         }
     }
 

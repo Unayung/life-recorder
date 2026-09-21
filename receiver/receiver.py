@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MAX_UPLOAD = 32 * 1024 * 1024
+MAX_VOCABULARY_BYTES = 256 * 1024
 
 
 def atomic_write(path: Path, data: bytes):
@@ -214,6 +215,10 @@ class Handler(BaseHTTPRequestHandler):
     def inbox(self) -> Inbox:
         return self.server.inbox
 
+    @property
+    def vocabulary(self) -> Path | None:
+        return getattr(self.server, "vocabulary", None)
+
     def respond(self, status: int, payload: dict):
         body = json.dumps(payload).encode()
         try:
@@ -239,6 +244,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(200, {"ok": True, "chunks": self.inbox.status()})
         if path == "/v1/days":
             return self.respond(200, {"days": self.inbox.day_index()})
+        if path == "/v1/vocabulary":
+            document = vocabulary_document(self.vocabulary)
+            if document:
+                return self.respond(200, document)
+            return self.respond(404, {"error": "No glossary configured"})
         if path.startswith("/v1/days/"):
             try:
                 # strptime rejects anything that is not a plain date, path traversal included.
@@ -249,6 +259,37 @@ class Handler(BaseHTTPRequestHandler):
             if document:
                 return self.respond(200, document)
         self.respond(404, {"error": "Not found"})
+
+    def do_PUT(self):
+        if not self.authorized():
+            return self.respond(401, {"error": "Unauthorized"})
+        if urlparse(self.path).path != "/v1/vocabulary":
+            return self.respond(404, {"error": "Not found"})
+        current = vocabulary_document(self.vocabulary)
+        if not current:
+            return self.respond(404, {"error": "No glossary configured"})
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= MAX_VOCABULARY_BYTES:
+                raise ValueError("Glossary is empty or too large")
+            edit = json.loads(self.rfile.read(length))
+            text = edit["text"]
+            if not isinstance(text, str):
+                raise ValueError("Glossary must be text")
+        except (ValueError, KeyError, UnicodeDecodeError):
+            return self.respond(400, {"error": "Invalid glossary"})
+        # Whoever edited an older version gets it back rather than silently replacing newer notes.
+        if edit.get("updated") not in (None, current["updated"]):
+            return self.respond(409, current)
+        try:
+            path = self.vocabulary
+            tmp = path.with_name(path.name + ".new")
+            tmp.write_text(text, encoding="utf-8")
+            tmp.chmod(0o600)
+            os.replace(tmp, path)  # The worker reads the file per clip, so the next one uses it.
+        except OSError:
+            return self.respond(503, {"error": "Storage temporarily unavailable"})
+        return self.respond(200, vocabulary_document(path))
 
     def do_POST(self):
         if not self.authorized():
@@ -312,6 +353,18 @@ def enable_tls(server: Receiver, cert, key):
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert, key)
     server.socket = context.wrap_socket(server.socket, server_side=True, do_handshake_on_connect=False)
+
+
+def vocabulary_document(path: Path | None) -> dict | None:
+    """The glossary as the phone edits it: the whole file, plus the version being edited."""
+    if not path:
+        return None
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        updated = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+    except OSError:
+        return None
+    return {"text": text, "updated": updated.isoformat(timespec="seconds").replace("+00:00", "Z")}
 
 
 def load_vocabulary(path: Path | None) -> str:
@@ -481,6 +534,7 @@ def main():
                "vocabulary": args.vocabulary}
     server = Receiver((args.host, args.port), Handler)
     server.inbox = inbox
+    server.vocabulary = args.vocabulary
     if args.cert and args.key:
         enable_tls(server, args.cert, args.key)
     stop = threading.Event()

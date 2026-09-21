@@ -308,3 +308,68 @@ class TranscriptionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VocabularyTests(unittest.TestCase):
+    """The glossary is edited from the phone, so it is read and written over the same API."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        root = Path(self.temp.name)
+        self.inbox = Inbox(root, timezone.utc)
+        self.vocabulary = root / "vocabulary.md"
+        self.vocabulary.write_text("# 提示詞用\nJayce Eris\n", encoding="utf-8")
+        self.server = Receiver(("127.0.0.1", 0), Handler)
+        self.server.inbox = self.inbox
+        self.server.vocabulary = self.vocabulary
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+        self.temp.cleanup()
+
+    def request(self, method, body=None, token=None):
+        headers = {"Authorization": "Bearer " + (token or self.inbox.token)}
+        payload = json.dumps(body).encode() if body is not None else None
+        client = http.client.HTTPConnection(*self.server.server_address, timeout=5)
+        client.request(method, "/v1/vocabulary", payload, headers)
+        response = client.getresponse()
+        result = response.status, json.loads(response.read() or b"{}")
+        client.close()
+        return result
+
+    def test_edit_from_the_phone_reaches_the_next_clip(self):
+        status, document = self.request("GET")
+        self.assertEqual(status, 200)
+        self.assertIn("Jayce", document["text"])
+        status, saved = self.request("PUT", {"text": "# 提示詞用\nJayce Eris Connie\n",
+                                             "updated": document["updated"]})
+        self.assertEqual(status, 200)
+        self.assertIn("Connie", self.vocabulary.read_text(encoding="utf-8"))
+        self.assertIn("Connie", receiver.load_vocabulary(self.vocabulary))
+        self.assertNotEqual(saved["updated"], "")
+
+    def test_stale_edit_is_refused_with_the_current_text(self):
+        self.vocabulary.write_text("# 提示詞用\nwritten on the desktop\n", encoding="utf-8")
+        status, conflict = self.request("PUT", {"text": "from the phone", "updated": "2020-01-01T00:00:00Z"})
+        self.assertEqual(status, 409)
+        self.assertIn("desktop", conflict["text"])
+        self.assertIn("desktop", self.vocabulary.read_text(encoding="utf-8"))
+
+    def test_edit_without_a_version_overwrites(self):
+        status, _ = self.request("PUT", {"text": "deliberate replacement"})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.vocabulary.read_text(encoding="utf-8"), "deliberate replacement")
+
+    def test_glossary_needs_the_token(self):
+        self.assertEqual(self.request("GET", token="wrong")[0], 401)
+        self.assertEqual(self.request("PUT", {"text": "no"}, token="wrong")[0], 401)
+        self.assertNotIn("no", self.vocabulary.read_text(encoding="utf-8"))
+
+    def test_missing_glossary_is_not_found(self):
+        self.server.vocabulary = None
+        self.assertEqual(self.request("GET")[0], 404)
+        self.assertEqual(self.request("PUT", {"text": "nowhere"})[0], 404)

@@ -64,6 +64,17 @@ struct ContentView: View {
     @Binding var showSettings: Bool
     @State private var changing = false
 
+    private func row(_ title: String, _ icon: String) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+            Spacer()
+            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+        }
+        .font(.headline).padding(.vertical, 14).padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 18))
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -109,19 +120,14 @@ struct ContentView: View {
                             }
                         }
                     }
-                    NavigationLink {
-                        DayListView()
-                    } label: {
-                        HStack {
-                            Label("Read your days", systemImage: "book")
-                            Spacer()
-                            Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                    VStack(spacing: 12) {
+                        NavigationLink { DayListView() } label: { row("Read your days", "book") }
+                            .buttonStyle(.plain)
+                        NavigationLink { VocabularyView() } label: {
+                            row("Names and terms", "character.book.closed")
                         }
-                        .font(.headline).padding(.vertical, 14).padding(.horizontal, 18)
-                        .frame(maxWidth: .infinity)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 18))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     Text("Records with the screen locked. After restarting the phone or force-quitting, open this app once to resume. Switching off stays off.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)
