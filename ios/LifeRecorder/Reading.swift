@@ -178,6 +178,7 @@ struct DayDetailView: View {
     @State private var showTranscript = false
     @State private var loading = true
     @State private var query = ""
+    @AppStorage("dayNewestFirst") private var newestFirst = true
 
     private var shown: String {
         guard let document else { return "" }
@@ -236,15 +237,21 @@ struct DayDetailView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    if headings.count > 1 {
-                        Menu {
-                            ForEach(headings) { heading in
-                                Button(heading.plainText) {
-                                    withAnimation { proxy.scrollTo(heading.id, anchor: .top) }
+                    Menu {
+                        Picker("Order", selection: $newestFirst) {
+                            Text("Newest first").tag(true)
+                            Text("Earliest first").tag(false)
+                        }
+                        if headings.count > 1 {
+                            Section("Jump to") {
+                                ForEach(headings) { heading in
+                                    Button(heading.plainText) {
+                                        withAnimation { proxy.scrollTo(heading.id, anchor: .top) }
+                                    }
                                 }
                             }
-                        } label: { Image(systemName: "list.bullet.indent") }
-                    }
+                        }
+                    } label: { Image(systemName: "list.bullet.indent") }
                     if !shown.isEmpty {
                         ShareLink(item: shown) { Image(systemName: "square.and.arrow.up") }
                     }
@@ -265,7 +272,7 @@ struct DayDetailView: View {
     }
 
     private var headings: [Block] {
-        blocks.filter { if case .heading(_, let level) = $0.kind { return level <= 3 } else { return false } }
+        sections.compactMap(\.heading)
     }
 
     /// One section's Markdown, headed by the day it belongs to.
@@ -278,7 +285,7 @@ struct DayDetailView: View {
 
     /// Blocks grouped under the heading they follow, with the search filter applied to the body.
     private var sections: [DaySection] {
-        let sections = allSections
+        let sections = ordered(allSections)
         guard !query.isEmpty else { return sections.filter { $0.heading != nil || !$0.blocks.isEmpty } }
         let needle = query.lowercased()
         return sections.compactMap { section in
@@ -288,6 +295,13 @@ struct DayDetailView: View {
             return DaySection(id: section.id, heading: section.heading,
                               blocks: headingMatches && matches.isEmpty ? section.blocks : matches)
         }
+    }
+
+    /// Newest first, but whatever opens the day (the date, a note about gaps) stays at the top.
+    private func ordered(_ sections: [DaySection]) -> [DaySection] {
+        guard newestFirst else { return sections }
+        let opening = sections.prefix { $0.heading == nil }
+        return opening + sections.dropFirst(opening.count).reversed()
     }
 
     private var allSections: [DaySection] {
