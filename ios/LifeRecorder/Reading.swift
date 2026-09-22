@@ -14,6 +14,56 @@ struct DayDocument: Codable {
     let transcript: String
 }
 
+enum ReadingCache {
+    static let directory: URL = {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let url = support.appendingPathComponent("Reading", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true,
+            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        return url
+    }()
+}
+
+/// A line that matched a search, and where in the archive it came from.
+struct SearchHit: Identifiable, Hashable {
+    let date: String
+    let time: String
+    let line: String
+    let inSummary: Bool
+    var id: String { "\(date)|\(inSummary)|\(time)|\(line)" }
+}
+
+/// Search every day saved on the phone. Off the main actor: this reads files and can
+/// run over months of transcripts while the field stays responsive.
+func searchSavedDays(_ query: String, limit: Int = 150) -> [SearchHit] {
+    let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+    guard needle.count > 1 else { return [] }
+    let files = (try? FileManager.default.contentsOfDirectory(at: ReadingCache.directory,
+                                                              includingPropertiesForKeys: nil)) ?? []
+    var hits: [SearchHit] = []
+    for file in files.filter({ $0.pathExtension == "json" && $0.lastPathComponent != "days.json" })
+        .sorted(by: { $0.lastPathComponent > $1.lastPathComponent }) {  // Newest day first.
+        guard let data = try? Data(contentsOf: file),
+              let document = try? JSONDecoder().decode(DayDocument.self, from: data) else { continue }
+        for (text, inSummary) in [(document.summary ?? "", true), (document.transcript, false)] {
+            var heading = ""
+            for raw in text.components(separatedBy: .newlines) {
+                let line = raw.trimmingCharacters(in: .whitespaces)
+                if line.hasPrefix("#") {
+                    heading = Block.shortenHeading(line.drop { $0 == "#" }.trimmingCharacters(in: .whitespaces))
+                    continue
+                }
+                guard line.lowercased().contains(needle) else { continue }
+                // A transcript line carries its own time; a summary line belongs to its heading.
+                let time = line.hasPrefix("[") ? String(line.prefix(6).dropFirst().prefix(5)) : heading
+                hits.append(SearchHit(date: document.date, time: time, line: line, inSummary: inSummary))
+                if hits.count >= limit { return hits }
+            }
+        }
+    }
+    return hits
+}
+
 /// Reads days and their summaries back from the Mac, and keeps the last answer on disk
 /// so the phone still shows something when the Mac is asleep or out of reach.
 @MainActor
@@ -27,13 +77,7 @@ final class SummaryStore: ObservableObject {
     @Published private(set) var loading = false
     @Published private(set) var lastSynced: Date? = UserDefaults.standard.object(forKey: "readingLastSynced") as? Date
 
-    private let cache: URL = {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let url = support.appendingPathComponent("Reading", isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true,
-            attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-        return url
-    }()
+    private var cache: URL { ReadingCache.directory }
 
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -117,9 +161,33 @@ final class SummaryStore: ObservableObject {
 
 struct DayListView: View {
     @ObservedObject private var store = SummaryStore.shared
+    @State private var query = ""
+    @State private var hits: [SearchHit] = []
+    @State private var searching = false
 
     var body: some View {
         List {
+            if !query.isEmpty {
+                if searching { HStack { ProgressView(); Text("Searching every day").foregroundStyle(.secondary) } }
+                else if hits.isEmpty { ContentUnavailableView.search(text: query) }
+                ForEach(hits) { hit in
+                    NavigationLink {
+                        DayDetailView(store: store, day: day(for: hit.date), initialQuery: query,
+                                      startInTranscript: !hit.inSummary)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(hit.line).font(.callout).lineLimit(3)
+                            HStack(spacing: 6) {
+                                Image(systemName: hit.inSummary ? "text.quote" : "waveform")
+                                Text(Self.shortTitle(for: hit.date))
+                                if !hit.time.isEmpty { Text("· \(hit.time)") }
+                            }
+                            .font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            } else {
             Section {
                 if !store.status.isEmpty {
                     Text(store.status).foregroundStyle(.secondary)
@@ -148,11 +216,29 @@ struct DayListView: View {
                     .padding(.vertical, 2)
                 }
             }
+            }
         }
         .navigationTitle("Days")
+        .searchable(text: $query, prompt: "Search every day")
         .refreshable { await store.refresh() }
-        .overlay { if store.loading && store.days.isEmpty { ProgressView() } }
+        .overlay { if store.loading && store.days.isEmpty && query.isEmpty { ProgressView() } }
         .task { await store.refresh() }
+        .task(id: query) {
+            guard !query.isEmpty else { hits = []; searching = false; return }
+            searching = true
+            // Let typing settle before reading months of transcripts.
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            let found = await Task.detached(priority: .userInitiated) { [query] in searchSavedDays(query) }.value
+            guard !Task.isCancelled else { return }
+            hits = found
+            searching = false
+        }
+    }
+
+    /// Days are listed from the desktop; a hit can still be shown if that list is stale.
+    private func day(for date: String) -> DaySummary {
+        store.days.first { $0.date == date } ?? DaySummary(date: date, summarized: true, updated: .distantPast)
     }
 
     static func parse(_ date: String) -> Date? {
@@ -173,6 +259,8 @@ struct DayListView: View {
 struct DayDetailView: View {
     let store: SummaryStore
     let day: DaySummary
+    var initialQuery = ""
+    var startInTranscript = false
     @State private var document: DayDocument?
     @State private var blocks: [Block] = []
     @State private var showTranscript = false
@@ -258,13 +346,13 @@ struct DayDetailView: View {
                 }
             }
         }
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic),
-                    prompt: showTranscript ? "Search this day" : "Search the summary")
+        .searchable(text: $query, prompt: showTranscript ? "Search this day" : "Search the summary")
         .navigationTitle(DayListView.shortTitle(for: day.date))
         .navigationBarTitleDisplayMode(.inline)
         .task {
             document = await store.document(for: day.date)
-            showTranscript = document?.summary == nil
+            showTranscript = document?.summary == nil || startInTranscript
+            query = initialQuery
             blocks = Block.parse(shown)
             loading = false
         }
