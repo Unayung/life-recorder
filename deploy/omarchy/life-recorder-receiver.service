@@ -1,0 +1,12 @@
+[Unit]
+Description=Life Recorder receiver
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/Projects/life-recorder
+ExecStart=/usr/bin/python3 receiver/receiver.py --data-dir %h/.local/share/life-recorder --host 0.0.0.0 --port 8765 --cert %h/.local/share/life-recorder/receiver.crt --key %h/.local/share/life-recorder/receiver.key --whisper %h/Projects/whisper.cpp/build/bin/whisper-cli --model models/ggml-breeze-asr-25-q5_k.bin --vad-model models/ggml-silero-v6.2.0.bin --vocabulary %h/.local/share/life-recorder/vocabulary.md --language zh --timezone Asia/Taipei
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

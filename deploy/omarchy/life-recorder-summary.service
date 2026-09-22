@@ -1,0 +1,7 @@
+[Unit]
+Description=Life Recorder summary update
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/life-recorder/summarize.sh
+TimeoutStartSec=15min

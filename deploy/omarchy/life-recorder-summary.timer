@@ -1,0 +1,9 @@
+[Unit]
+Description=Update Life Recorder summary every 10 minutes
+
+[Timer]
+OnCalendar=*:03/10
+Persistent=true
+
+[Install]
+WantedBy=timers.target

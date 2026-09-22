@@ -1,0 +1,12 @@
+[Unit]
+Description=Life Recorder meeting capture (mic + speakers while a call app uses the mic)
+After=pipewire-pulse.service life-recorder-receiver.service
+
+[Service]
+WorkingDirectory=%h/Projects/life-recorder
+ExecStart=/usr/bin/python3 desktop/capture_linux.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
