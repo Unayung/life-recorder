@@ -11,6 +11,10 @@ final class ChunkWriter: @unchecked Sendable {
     private let startedAt = Date()
     private var sampleRate: Double = 48000
     private var failed = false
+    /// The loudest short window in the clip being written, as amplitude (1.0 is full scale).
+    private var loudest: Float = 0
+    private var windowSum: Float = 0
+    private var windowFrames = 0
     private let onChunk: () -> Void
     private let onError: (String) -> Void
 
@@ -33,6 +37,7 @@ final class ChunkWriter: @unchecked Sendable {
             guard !failed else { return }
             do {
                 if file == nil { try begin(format: copy.format) }
+                measure(copy)
                 try file?.write(from: copy)
                 chunkFrames += Int64(copy.frameLength)
                 totalFrames += Int64(copy.frameLength)
@@ -40,6 +45,28 @@ final class ChunkWriter: @unchecked Sendable {
             } catch {
                 failed = true
                 onError(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Loudness in 100 ms windows: a minute is silence only if none of its windows rose above the
+    /// threshold. Windows, not a whole-clip average, so one sentence in a quiet hour still counts.
+    private func measure(_ buffer: AVAudioPCMBuffer) {
+        guard let channels = buffer.floatChannelData else { loudest = 1; return }  // Unknown format: keep it.
+        let window = Int(sampleRate / 10)
+        let stride = buffer.stride
+        for frame in 0..<Int(buffer.frameLength) {
+            var sum: Float = 0
+            for channel in 0..<Int(buffer.format.channelCount) {
+                let sample = channels[channel][frame * stride]
+                sum += sample * sample
+            }
+            windowSum += sum / Float(buffer.format.channelCount)
+            windowFrames += 1
+            if windowFrames >= window {
+                loudest = max(loudest, (windowSum / Float(windowFrames)).squareRoot())
+                windowSum = 0
+                windowFrames = 0
             }
         }
     }
@@ -71,6 +98,18 @@ final class ChunkWriter: @unchecked Sendable {
     private func finishChunk() throws {
         file = nil // Closing finalizes the M4A container before computing the checksum.
         guard let journal, chunkFrames > 0 else { return }
+        let peak = loudest
+        loudest = 0
+        windowSum = 0
+        windowFrames = 0
+        if SilenceGate.shouldSkip(peak: peak) {
+            QueueStore.discardRecording(journal)
+            SilenceGate.recordSkipped(peak: peak)
+            self.journal = nil
+            chunkFrames = 0
+            return
+        }
+        SilenceGate.recordKept()
         _ = try QueueStore.seal(journal, duration: Double(chunkFrames) / sampleRate)
         self.journal = nil
         chunkFrames = 0

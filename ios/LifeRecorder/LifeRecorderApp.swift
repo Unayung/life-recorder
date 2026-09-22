@@ -63,6 +63,9 @@ struct ContentView: View {
     @ObservedObject var uploads: UploadManager
     @Binding var showSettings: Bool
     @State private var changing = false
+    @AppStorage("skipSilentClips") private var skipSilent = true
+    @AppStorage("silentClipsSkipped") private var skippedClips = 0
+    @AppStorage("silentClipsDeafRun") private var deafRun = 0
 
     private func row(_ title: String, _ icon: String) -> some View {
         HStack {
@@ -108,6 +111,19 @@ struct ContentView: View {
                         if let date = uploads.lastUploadedAt {
                             Text("Last upload: \(date.formatted(date: .omitted, time: .shortened))")
                                 .font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Toggle(isOn: $skipSilent) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Skip silent minutes")
+                                Text(skippedClips > 0
+                                     ? "\(skippedClips) minutes of quiet were not uploaded, so speech arrives sooner."
+                                     : "Minutes with nothing but room noise are dropped instead of uploaded.")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
+                        }
+                        if deafRun >= 5 {
+                            Text("The microphone has picked up no sound at all for \(deafRun) minutes. Something else may be holding it; switch the recorder off and on.")
+                                .font(.footnote).foregroundStyle(.orange)
                         }
                         if recorder.incompleteClips > 0 {
                             VStack(alignment: .leading, spacing: 8) {

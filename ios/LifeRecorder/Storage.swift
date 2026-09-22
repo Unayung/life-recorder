@@ -63,6 +63,14 @@ enum QueueStore {
         return chunk
     }
 
+    /// Throw away a clip that was never sealed: silence nobody needs to keep.
+    static func discardRecording(_ journal: RecordingJournal) {
+        let name = journal.id.uuidString.lowercased()
+        for suffix in [".m4a", ".recording.json"] {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name + suffix))
+        }
+    }
+
     static let damagedDirectory: URL = directory.appendingPathComponent("Damaged", isDirectory: true)
 
     /// Clips whose audio could not be read; kept as bytes, not counted as pending work.
@@ -179,5 +187,43 @@ struct ReceiverSettings {
         try Credentials.setToken(token)
         UserDefaults.standard.set(parsed.absoluteString, forKey: "receiverURL")
         UserDefaults.standard.set(cleanPin, forKey: "certificateSHA256")
+    }
+}
+
+/// Most recorded minutes are an empty room. Dropping them on the phone keeps the upload queue
+/// short, so the minutes that hold speech reach the desktop while they are still fresh.
+enum SilenceGate {
+    /// Speech across a room peaks well above this; room tone sits below it.
+    static let threshold: Float = 0.0056  // -45 dBFS
+    /// Below this the microphone is not producing sound at all, which is a fault, not a quiet room.
+    static let deaf: Float = 0.0001  // -80 dBFS
+
+    private static let defaults = UserDefaults.standard
+
+    static var skipping: Bool {
+        defaults.object(forKey: "skipSilentClips") as? Bool ?? true
+    }
+
+    static var skippedCount: Int { defaults.integer(forKey: "silentClipsSkipped") }
+
+    /// How many clips in a row held no sound at all; a run means the microphone has gone deaf.
+    static var deafRun: Int { defaults.integer(forKey: "silentClipsDeafRun") }
+
+    static func shouldSkip(peak: Float) -> Bool {
+        skipping && peak < threshold
+    }
+
+    static func recordSkipped(peak: Float) {
+        defaults.set(skippedCount + 1, forKey: "silentClipsSkipped")
+        defaults.set(peak < deaf ? deafRun + 1 : 0, forKey: "silentClipsDeafRun")
+    }
+
+    static func recordKept() {
+        defaults.set(0, forKey: "silentClipsDeafRun")
+    }
+
+    static func reset() {
+        defaults.set(0, forKey: "silentClipsSkipped")
+        defaults.set(0, forKey: "silentClipsDeafRun")
     }
 }
