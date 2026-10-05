@@ -408,7 +408,12 @@ def transcribe(row, model: Path, work: Path, whisper: str, ffmpeg: str,
         hint = ", ".join(part for part in (prompt, load_vocabulary(vocabulary)) if part)
         if hint:
             command += ["--prompt", hint]
-        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+        try:
+            subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+        except subprocess.CalledProcessError:
+            # whisper.cpp segfaults when the GPU has no memory left for it. The CPU is slower but always there.
+            subprocess.run(command + ["-ng"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=600)
         # whisper.cpp can emit a non-UTF-8 byte in otherwise valid JSON for
         # hallucinated noise. Replacement keeps the clip processable.
         output = json.loads(result_file.read_bytes().decode("utf-8", errors="replace"))

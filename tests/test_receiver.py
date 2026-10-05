@@ -305,6 +305,23 @@ class TranscriptionTests(unittest.TestCase):
         self.assertIn("--vad", whisper)
         self.assertEqual(whisper[whisper.index("--prompt") + 1], "PR, deploy")
 
+    def test_whisper_falls_back_to_cpu_when_the_gpu_run_fails(self):
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command[0] == "whisper-cli":
+                if "-ng" not in command:
+                    raise subprocess.CalledProcessError(-11, command)
+                prefix = Path(command[command.index("-of") + 1])
+                prefix.with_suffix(".json").write_text(json.dumps({"transcription": [{"text": "先 deploy"}]}))
+
+        with tempfile.TemporaryDirectory() as work, mock.patch.object(receiver.subprocess, "run", fake_run):
+            text = transcribe({"id": "clip", "path": "clip.m4a"}, Path("breeze.bin"), Path(work),
+                              "whisper-cli", "ffmpeg")
+        self.assertEqual(text, "先 deploy")
+        self.assertEqual(commands[2], commands[1] + ["-ng"])
+
 
 if __name__ == "__main__":
     unittest.main()
