@@ -6,6 +6,7 @@ install them with:
 
     cp deploy/omarchy/*.service deploy/omarchy/*.timer ~/.config/systemd/user/
     cp deploy/omarchy/summarize.sh ~/.local/share/life-recorder/
+    ln -s /path/to/your/summary-conventions.md ~/.local/share/life-recorder/summary-conventions.md   # if it lives elsewhere
     systemctl --user daemon-reload
     systemctl --user enable --now life-recorder-receiver life-recorder-desktop life-recorder-summary.timer
     loginctl enable-linger "$USER"
