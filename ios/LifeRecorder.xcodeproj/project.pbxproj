@@ -8,15 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		066F079475FA4272323846E7 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4912CAE16CD5C6C2B739463D /* UploadManager.swift */; };
+		0AD401481307B9BFBC33EC19 /* RecorderPairingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989AD68485F84E569D5471F7 /* RecorderPairingTests.swift */; };
+		18D9714ED62E059843D1A9AC /* RecorderPairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2AA777304998E217750790 /* RecorderPairing.swift */; };
 		1F2B7EE6A773F6B72AC416FA /* ChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */; };
+		2630F99F1B3A71C858F86398 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF2C0785D509C8CA79FFF6B /* Platform.swift */; };
 		49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */; };
+		4E6A018A3661DD43D5109404 /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741E03E5D6FC0A34C88CEA4D /* Reading.swift */; };
 		54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
 		548DE3A98498B0B10E21540F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53B3827423B97E0166CF2964 /* Assets.xcassets */; };
 		608D204380302040F6F27CDE /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741E03E5D6FC0A34C88CEA4D /* Reading.swift */; };
+		644835340AAF1500241778DF /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
+		72F2BF749E91EB59438030C8 /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A142BB3D40140B42C9C91EC5 /* Vocabulary.swift */; };
 		8C34593B9CD5B393F7C90C6D /* NativeUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A0E11377963676F1DB20DB /* NativeUploadTests.swift */; };
+		908B36241C02AED196BEE2F6 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF2C0785D509C8CA79FFF6B /* Platform.swift */; };
+		AD2DA97AC731BB22F5ACCD48 /* PinnedTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */; };
+		C79E7B068FAE912465C35DA9 /* PinnedTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */; };
 		C87128C9329B9A638C31BF46 /* RecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */; };
+		CDAB895CF1BBC01CCC556E57 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 45A98DC4A2BFD8D5D8F8A545 /* Assets.xcassets */; };
 		E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35B1754886B3F5500411113 /* Recorder.swift */; };
 		F04D1F493091DE73475B9CAA /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A142BB3D40140B42C9C91EC5 /* Vocabulary.swift */; };
+		F5AA2F2C80CC2B3E781CCD51 /* LifeRecorderMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A631F623B253E7ACA8A7E103 /* LifeRecorderMacApp.swift */; };
+		FB7FB58E924DF38057E04222 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4B28BE2DFB2502877C926F /* LibraryView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +39,13 @@
 			remoteGlobalIDString = DBE1F1D5E440E3A72A76DA1C;
 			remoteInfo = LifeRecorder;
 		};
+		9E07E680E1E2CD93AFA8A321 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FBE37FE1F42A0BC2B17BE950 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 048F08BE3A1395BF62C8D9D1;
+			remoteInfo = LifeRecorderMac;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -34,14 +53,24 @@
 		1EE7061AC1E987E130601AC9 /* LifeRecorderTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LifeRecorderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		248F26ABAF4F063BA289ED46 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeRecorderApp.swift; sourceTree = "<group>"; };
+		45A98DC4A2BFD8D5D8F8A545 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4912CAE16CD5C6C2B739463D /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		53B3827423B97E0166CF2964 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5788338C803ABC3F322E2C05 /* LifeRecorderMacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LifeRecorderMacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		71CA51A8130E11F903254F74 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		73A0E11377963676F1DB20DB /* NativeUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadTests.swift; sourceTree = "<group>"; };
 		741E03E5D6FC0A34C88CEA4D /* Reading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reading.swift; sourceTree = "<group>"; };
+		776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedTransport.swift; sourceTree = "<group>"; };
 		7C47086B1533C94C651B4CCF /* LifeRecorder.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LifeRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8A2AA777304998E217750790 /* RecorderPairing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderPairing.swift; sourceTree = "<group>"; };
+		8C4B28BE2DFB2502877C926F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderTests.swift; sourceTree = "<group>"; };
 		979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkWriter.swift; sourceTree = "<group>"; };
+		989AD68485F84E569D5471F7 /* RecorderPairingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderPairingTests.swift; sourceTree = "<group>"; };
 		A142BB3D40140B42C9C91EC5 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
+		A631F623B253E7ACA8A7E103 /* LifeRecorderMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeRecorderMacApp.swift; sourceTree = "<group>"; };
+		A68D2699666CB905FC7325D6 /* LifeRecorderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LifeRecorderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ABF2C0785D509C8CA79FFF6B /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		B35B1754886B3F5500411113 /* Recorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recorder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -53,6 +82,8 @@
 				979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */,
 				248F26ABAF4F063BA289ED46 /* Info.plist */,
 				39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */,
+				776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */,
+				ABF2C0785D509C8CA79FFF6B /* Platform.swift */,
 				741E03E5D6FC0A34C88CEA4D /* Reading.swift */,
 				B35B1754886B3F5500411113 /* Recorder.swift */,
 				1E138E288F79C8B5DE281250 /* Storage.swift */,
@@ -66,9 +97,19 @@
 			isa = PBXGroup;
 			children = (
 				2413F16E452318A11E779BB2 /* LifeRecorder */,
+				CCCA9D4558C3593E8A1002FC /* LifeRecorderMac */,
+				B83F4E031D7D846B04C0BC47 /* LifeRecorderMacTests */,
 				BED0986A77D2064BB37D7CFD /* LifeRecorderTests */,
 				CFC7CCB19F17282282914627 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		B83F4E031D7D846B04C0BC47 /* LifeRecorderMacTests */ = {
+			isa = PBXGroup;
+			children = (
+				989AD68485F84E569D5471F7 /* RecorderPairingTests.swift */,
+			);
+			path = LifeRecorderMacTests;
 			sourceTree = "<group>";
 		};
 		BED0986A77D2064BB37D7CFD /* LifeRecorderTests */ = {
@@ -80,10 +121,24 @@
 			path = LifeRecorderTests;
 			sourceTree = "<group>";
 		};
+		CCCA9D4558C3593E8A1002FC /* LifeRecorderMac */ = {
+			isa = PBXGroup;
+			children = (
+				45A98DC4A2BFD8D5D8F8A545 /* Assets.xcassets */,
+				71CA51A8130E11F903254F74 /* Info.plist */,
+				8C4B28BE2DFB2502877C926F /* LibraryView.swift */,
+				A631F623B253E7ACA8A7E103 /* LifeRecorderMacApp.swift */,
+				8A2AA777304998E217750790 /* RecorderPairing.swift */,
+			);
+			path = LifeRecorderMac;
+			sourceTree = "<group>";
+		};
 		CFC7CCB19F17282282914627 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				7C47086B1533C94C651B4CCF /* LifeRecorder.app */,
+				A68D2699666CB905FC7325D6 /* LifeRecorderMac.app */,
+				5788338C803ABC3F322E2C05 /* LifeRecorderMacTests.xctest */,
 				1EE7061AC1E987E130601AC9 /* LifeRecorderTests.xctest */,
 			);
 			name = Products;
@@ -92,6 +147,42 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		048F08BE3A1395BF62C8D9D1 /* LifeRecorderMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 587167E1FF650E4D60E7195D /* Build configuration list for PBXNativeTarget "LifeRecorderMac" */;
+			buildPhases = (
+				1271FF719E2D82DC4F20B9E3 /* Sources */,
+				37D8B4CC2BE6DB981EEFC891 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LifeRecorderMac;
+			packageProductDependencies = (
+			);
+			productName = LifeRecorderMac;
+			productReference = A68D2699666CB905FC7325D6 /* LifeRecorderMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9CFB84683FBB9F06EE9DA5C2 /* LifeRecorderMacTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CC325828B964BD4ABDB5CD64 /* Build configuration list for PBXNativeTarget "LifeRecorderMacTests" */;
+			buildPhases = (
+				06B0817215D89BA867409B7C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9F6510AF7BC63AB5593DB0A6 /* PBXTargetDependency */,
+			);
+			name = LifeRecorderMacTests;
+			packageProductDependencies = (
+			);
+			productName = LifeRecorderMacTests;
+			productReference = 5788338C803ABC3F322E2C05 /* LifeRecorderMacTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		B783F8B8E7C1A2E6020AAA56 /* LifeRecorderTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 19FC56F35461367086C25517 /* Build configuration list for PBXNativeTarget "LifeRecorderTests" */;
@@ -137,6 +228,14 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					048F08BE3A1395BF62C8D9D1 = {
+						DevelopmentTeam = WZFJ4E5LPD;
+						ProvisioningStyle = Automatic;
+					};
+					9CFB84683FBB9F06EE9DA5C2 = {
+						DevelopmentTeam = WZFJ4E5LPD;
+						ProvisioningStyle = Automatic;
+					};
 					B783F8B8E7C1A2E6020AAA56 = {
 						DevelopmentTeam = WZFJ4E5LPD;
 						ProvisioningStyle = Automatic;
@@ -163,11 +262,21 @@
 			targets = (
 				DBE1F1D5E440E3A72A76DA1C /* LifeRecorder */,
 				B783F8B8E7C1A2E6020AAA56 /* LifeRecorderTests */,
+				048F08BE3A1395BF62C8D9D1 /* LifeRecorderMac */,
+				9CFB84683FBB9F06EE9DA5C2 /* LifeRecorderMacTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		37D8B4CC2BE6DB981EEFC891 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDAB895CF1BBC01CCC556E57 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6A2A5FCDDD0A7416627B676A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -179,12 +288,37 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		06B0817215D89BA867409B7C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0AD401481307B9BFBC33EC19 /* RecorderPairingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1271FF719E2D82DC4F20B9E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FB7FB58E924DF38057E04222 /* LibraryView.swift in Sources */,
+				F5AA2F2C80CC2B3E781CCD51 /* LifeRecorderMacApp.swift in Sources */,
+				C79E7B068FAE912465C35DA9 /* PinnedTransport.swift in Sources */,
+				2630F99F1B3A71C858F86398 /* Platform.swift in Sources */,
+				4E6A018A3661DD43D5109404 /* Reading.swift in Sources */,
+				18D9714ED62E059843D1A9AC /* RecorderPairing.swift in Sources */,
+				644835340AAF1500241778DF /* Storage.swift in Sources */,
+				72F2BF749E91EB59438030C8 /* Vocabulary.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D1085235C0176EDF1C1C5AC2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				1F2B7EE6A773F6B72AC416FA /* ChunkWriter.swift in Sources */,
 				49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */,
+				AD2DA97AC731BB22F5ACCD48 /* PinnedTransport.swift in Sources */,
+				908B36241C02AED196BEE2F6 /* Platform.swift in Sources */,
 				608D204380302040F6F27CDE /* Reading.swift in Sources */,
 				E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */,
 				54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */,
@@ -210,6 +344,11 @@
 			target = DBE1F1D5E440E3A72A76DA1C /* LifeRecorder */;
 			targetProxy = 66F4F524359F4940955B3693 /* PBXContainerItemProxy */;
 		};
+		9F6510AF7BC63AB5593DB0A6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 048F08BE3A1395BF62C8D9D1 /* LifeRecorderMac */;
+			targetProxy = 9E07E680E1E2CD93AFA8A321 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -230,6 +369,41 @@
 			};
 			name = Debug;
 		};
+		5852D7ABAE5D4C185E0A73D5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LifeRecorderMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.unayung.liferecorder.mac;
+				PRODUCT_MODULE_NAME = LifeRecorderMac;
+				PRODUCT_NAME = "Life Recorder";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		932E7B643F9653FEDE979047 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.unayung.LifeRecorderMacTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Life Recorder.app/Contents/MacOS/Life Recorder";
+			};
+			name = Release;
+		};
 		A471AC8830658A79EBF98EF0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -247,6 +421,23 @@
 			};
 			name = Release;
 		};
+		B279AF3431628F4498EA266F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.unayung.LifeRecorderMacTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Life Recorder.app/Contents/MacOS/Life Recorder";
+			};
+			name = Debug;
+		};
 		B520043D7F3BE03D8D40413D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -263,6 +454,24 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		CD821E8A3BFF2DDFE4411A49 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LifeRecorderMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.unayung.liferecorder.mac;
+				PRODUCT_MODULE_NAME = LifeRecorderMac;
+				PRODUCT_NAME = "Life Recorder";
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		CFD5BDDE52D9400FB08D71E2 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -312,10 +521,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -377,11 +586,11 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -432,6 +641,24 @@
 			buildConfigurations = (
 				EEBE7E01335C383E020E4DD7 /* Debug */,
 				CFD5BDDE52D9400FB08D71E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		587167E1FF650E4D60E7195D /* Build configuration list for PBXNativeTarget "LifeRecorderMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5852D7ABAE5D4C185E0A73D5 /* Debug */,
+				CD821E8A3BFF2DDFE4411A49 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CC325828B964BD4ABDB5CD64 /* Build configuration list for PBXNativeTarget "LifeRecorderMacTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B279AF3431628F4498EA266F /* Debug */,
+				932E7B643F9653FEDE979047 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

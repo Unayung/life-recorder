@@ -111,10 +111,7 @@ final class VocabularyStore: ObservableObject {
     @Published var conflict: VocabularyDocument?
 
     private var updated: String?
-    private let cache: URL = {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("vocabulary.md")
-    }()
+    private let cache = AppFiles.support.appendingPathComponent("vocabulary.md")
 
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -132,7 +129,9 @@ final class VocabularyStore: ObservableObject {
         busy = true
         defer { busy = false }
         do {
-            adopt(try await send("GET", body: nil))
+            // The request outlives the page that asked. A Mac rebuilds the page as it appears,
+            // which would cancel this and leave the second ask to find the store busy.
+            adopt(try await Task { try await send("GET", body: nil) }.value)
             status = ""
             failed = false
         } catch {
@@ -234,9 +233,9 @@ struct VocabularyView: View {
             }
         }
         .navigationTitle("Names and terms")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .primaryAction) {
                 if store.busy { ProgressView() }
                 Menu {
                     Button("Reload from desktop", systemImage: "arrow.clockwise") {
@@ -246,7 +245,7 @@ struct VocabularyView: View {
                 } label: { Image(systemName: "ellipsis.circle") }
             }
         }
-        .sheet(isPresented: $editingText) { GlossaryTextView() }
+        .sheet(isPresented: $editingText) { GlossaryTextView().sheetSize(width: 620, height: 520) }
         .task { await store.load() }
         .alert("Changed on your desktop", isPresented: Binding(get: { store.conflict != nil },
                                                                set: { if !$0 { store.conflict = nil } })) {
@@ -282,6 +281,15 @@ struct GlossarySectionView: View {
                         }
                     }
                 }
+                #if os(macOS)
+                // Swiping needs a trackpad; a mouse needs a menu.
+                .contextMenu {
+                    Button("Delete", role: .destructive) {
+                        store.glossary.remove(row)
+                        Task { await store.save() }
+                    }
+                }
+                #endif
             }
             .onDelete { offsets in
                 for row in offsets.map({ current.rows[$0] }) { store.glossary.remove(row) }
@@ -289,12 +297,12 @@ struct GlossarySectionView: View {
             }
         }
         .navigationTitle(current.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .toolbar {
             Button("Add", systemImage: "plus") { adding = true }
         }
         .sheet(isPresented: $adding) {
-            NavigationStack { GlossaryRowView(section: current, row: nil) }
+            NavigationStack { GlossaryRowView(section: current, row: nil) }.sheetSize(width: 460, height: 340)
         }
     }
 }
@@ -317,7 +325,9 @@ struct GlossaryRowView: View {
                             while cells.count <= index { cells.append("") }
                             cells[index] = value
                         }), axis: .vertical)
+                        #if os(iOS)
                         .textInputAutocapitalization(.never)
+                        #endif
                         .autocorrectionDisabled()
                 }
             }
@@ -326,8 +336,9 @@ struct GlossaryRowView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+        .formStyle(.grouped)
         .navigationTitle(row == nil ? "New entry" : (row?.cells.first ?? ""))
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineTitle()
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
@@ -361,7 +372,7 @@ struct GlossaryNotesView: View {
             .font(.system(.body, design: .monospaced))
             .padding(.horizontal, 12)
             .navigationTitle(section.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 Button("Save") {
                     store.glossary.replaceBody(of: section, with: text)
@@ -384,7 +395,7 @@ struct GlossaryTextView: View {
                 .font(.system(.caption, design: .monospaced))
                 .padding(.horizontal, 12)
                 .navigationTitle("Glossary file")
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {

@@ -206,6 +206,18 @@ The pairing token can read transcripts, summaries and the glossary, not just upl
 
 The receiver writes the combined transcript to `life.md` in the data directory. You can move that file anywhere, such as `~/Documents/life.md`, and leave a symlink at the original path.
 
+## Reading days back on a Mac
+
+The same Xcode project builds a native Mac app for the reading half: every day in a sidebar, its summary or transcript beside it, search across the whole archive, and the names and terms editor. It does not record; on a Mac that stays with `desktop/capture_mac`.
+
+```sh
+scripts/install-mac.sh
+```
+
+builds it and puts `Life Recorder.app` in `~/Applications` (`--build-only` and `--no-launch` stop earlier). A Mac that already runs the meeting recorder needs no pairing: the app uses the recorder's `receiver.token` and `receiver.crt`, and the receiver address in its launch agent. On any other Mac, open Settings and enter the address, token and certificate fingerprint from the pairing page.
+
+View > Make Text Bigger and Make Text Smaller (⌘+ and ⌘−) set the size of a day's text. Days are saved in `~/Library/Application Support/com.unayung.liferecorder.mac`, so they stay readable when the receiver is out of reach; treat that folder like the transcript itself.
+
 ## Recording behavior
 
 Tap the record switch once. Recording continues while the screen is locked and while other apps are used. If the iPhone reboots or the app is force-quit, iOS requires opening Life Recorder once before the microphone can resume; reopening the app resumes recording on its own. Minutes whose loudest moment never reaches speech level are dropped before upload (the main screen shows how many, and has a switch to keep everything), and a long run of completely silent clips is reported as a fault. Pending audio stays on the phone until the receiver acknowledges it.

@@ -16,8 +16,7 @@ struct DayDocument: Codable {
 
 enum ReadingCache {
     static let directory: URL = {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let url = support.appendingPathComponent("Reading", isDirectory: true)
+        let url = AppFiles.support.appendingPathComponent("Reading", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true,
             attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
         return url
@@ -126,8 +125,8 @@ final class SummaryStore: ObservableObject {
             UserDefaults.standard.set(lastSynced, forKey: "readingLastSynced")
             status = fresh.isEmpty ? "No days recorded yet" : ""
         } catch {
-            status = days.isEmpty ? "Cannot reach your Mac, and nothing is saved on this phone yet"
-                                  : "Offline — showing the copies saved on this phone"
+            status = days.isEmpty ? "Cannot reach \(Wording.receiver), and nothing is saved on \(Wording.here) yet"
+                                  : "Offline — showing the copies saved on \(Wording.here)"
         }
     }
 
@@ -267,6 +266,7 @@ struct DayDetailView: View {
     @State private var loading = true
     @State private var query = ""
     @AppStorage("dayNewestFirst") private var newestFirst = true
+    @Environment(\.textScale) private var textScale
 
     private var shown: String {
         guard let document else { return "" }
@@ -285,9 +285,10 @@ struct DayDetailView: View {
                                 Text("Transcript").tag(true)
                             }
                             .pickerStyle(.segmented)
+                            .labelsHidden()
                         }
                         Text("Updated \(day.updated.formatted(date: .omitted, time: .shortened))")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.reading(.caption, scale: textScale)).foregroundStyle(.secondary)
                         ForEach(sections) { section in
                             Section {
                                 ForEach(section.blocks) { block in BlockView(block: block) }
@@ -317,14 +318,17 @@ struct DayDetailView: View {
                         ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
                     } else {
                         ContentUnavailableView("Not downloaded yet", systemImage: "wifi.slash",
-                            description: Text("Open this day once while your Mac is reachable."))
+                            description: Text("Open this day once while \(Wording.receiver) is reachable."))
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
+                // A Mac window can be far wider than a line anyone wants to read.
+                .frame(maxWidth: 760 * textScale, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .primaryAction) {
                     Menu {
                         Picker("Order", selection: $newestFirst) {
                             Text("Newest first").tag(true)
@@ -348,11 +352,15 @@ struct DayDetailView: View {
         }
         .searchable(text: $query, prompt: showTranscript ? "Search this day" : "Search the summary")
         .navigationTitle(DayListView.shortTitle(for: day.date))
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            document = await store.document(for: day.date)
-            showTranscript = document?.summary == nil || startInTranscript
-            query = initialQuery
+        .inlineTitle()
+        // Runs again whenever the receiver's copy of the day changes, so an open day keeps up.
+        .task(id: day.updated) {
+            let opening = document == nil
+            if let latest = await store.document(for: day.date) { document = latest }
+            if opening {
+                showTranscript = document?.summary == nil || startInTranscript
+                query = initialQuery
+            }
             blocks = Block.parse(shown)
             loading = false
         }
@@ -504,34 +512,36 @@ struct Block: Identifiable {
 
 struct BlockView: View {
     let block: Block
+    @Environment(\.textScale) private var scale
 
     var body: some View {
         switch block.kind {
         case .heading(let text, let level):
             VStack(alignment: .leading, spacing: 6) {
                 Text(Block.shortenHeading(text))
-                    .font(level == 1 ? .title2.bold() : level == 2 ? .title3.bold() : .headline)
+                    .font(level == 1 ? .reading(.title2, scale: scale).bold()
+                          : level == 2 ? .reading(.title3, scale: scale).bold() : .reading(.headline, scale: scale))
                     .foregroundStyle(level >= 3 ? .secondary : .primary)
                 if level <= 2 { Divider() }
             }
             .padding(.top, level == 1 ? 0 : 12)
 
         case .paragraph(let text):
-            Self.styled(text).font(.body).lineSpacing(5)
+            Self.styled(text).font(.reading(.body, scale: scale)).lineSpacing(5 * scale)
 
         case .bullet(let text):
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("•").font(.body).foregroundStyle(.secondary)
-                Self.styled(text).font(.body).lineSpacing(5)
+                Text("•").font(.reading(.body, scale: scale)).foregroundStyle(.secondary)
+                Self.styled(text).font(.reading(.body, scale: scale)).lineSpacing(5 * scale)
             }
 
         case .entry(let time, let text):
             HStack(alignment: .top, spacing: 12) {
                 Text(time)
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                    .frame(width: 42, alignment: .leading)
+                    .font(.reading(.caption, scale: scale).monospacedDigit()).foregroundStyle(.secondary)
+                    .frame(width: 42 * scale, alignment: .leading)
                     .padding(.top, 3)
-                Self.styled(text).font(.callout).lineSpacing(4)
+                Self.styled(text).font(.reading(.callout, scale: scale)).lineSpacing(4 * scale)
             }
 
         case .table(let rows):
@@ -539,7 +549,8 @@ struct BlockView: View {
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
                     GridRow {
                         ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                            Self.styled(cell).font(index == 0 ? .footnote.bold() : .footnote)
+                            Self.styled(cell).font(index == 0 ? .reading(.footnote, scale: scale).bold()
+                                                   : .reading(.footnote, scale: scale))
                         }
                     }
                 }

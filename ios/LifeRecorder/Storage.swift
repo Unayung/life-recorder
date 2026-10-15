@@ -20,8 +20,7 @@ struct RecordingJournal: Codable {
 
 enum QueueStore {
     static let directory: URL = {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let url = support.appendingPathComponent("PendingAudio", isDirectory: true)
+        let url = AppFiles.support.appendingPathComponent("PendingAudio", isDirectory: true)
         try! FileManager.default.createDirectory(at: url, withIntermediateDirectories: true,
             attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
         var values = URLResourceValues()
@@ -161,6 +160,16 @@ struct ReceiverSettings {
     let certificateSHA256: String
 
     static func load() -> ReceiverSettings? {
+        #if os(macOS)
+        // A Mac that runs the meeting recorder is already paired through it.
+        return paired() ?? RecorderPairing.load()
+        #else
+        return paired()
+        #endif
+    }
+
+    /// The pairing entered on this device.
+    static func paired() -> ReceiverSettings? {
         guard let raw = UserDefaults.standard.string(forKey: "receiverURL"),
               let url = URL(string: raw), url.scheme == "https", url.host != nil,
               url.user == nil, url.password == nil, url.query == nil, url.fragment == nil else { return nil }
