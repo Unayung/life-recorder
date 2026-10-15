@@ -399,6 +399,13 @@ if let seconds = option("--test-record").flatMap(Double.init) {
 
 let spool = dataDir.appendingPathComponent("desktop-spool")
 try FileManager.default.createDirectory(at: spool, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+// One recorder per data directory. A second one (the app opened from Finder while the login agent runs)
+// recorded every meeting again and uploaded it twice. The lock goes away with the process, even on a crash.
+let lock = open(dataDir.appendingPathComponent("capture.lock").path, O_CREAT | O_RDWR, 0o600)
+if lock < 0 || flock(lock, LOCK_EX | LOCK_NB) != 0 {
+    log("another Life Recorder Capture is already recording into \(dataDir.path); exiting")
+    exit(0)
+}
 // Files left mid-write by a crash have no index and can never be decoded; keep them out of the upload queue.
 for leftover in (try? FileManager.default.contentsOfDirectory(at: spool.appendingPathComponent("recording"),
                                                               includingPropertiesForKeys: nil)) ?? [] {
