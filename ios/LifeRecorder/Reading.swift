@@ -148,6 +148,25 @@ final class SummaryStore: ObservableObject {
         return try? decoder.decode(DayDocument.self, from: cached)
     }
 
+    /// Respell a name throughout one day's summary on the receiver. Returns how many places changed.
+    func correct(date: String, heard: String, name: String) async throws -> Int {
+        guard let settings = ReceiverSettings.load() else { throw URLError(.userAuthenticationRequired) }
+        var request = URLRequest(url: settings.baseURL.appendingPathComponent("v1/days/\(date)/correction"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer " + settings.token, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["heard": heard, "correct": name])
+        let (data, response) = try await session.data(for: request)
+        struct Reply: Decodable { let corrected: Int?; let error: String? }
+        let reply = try? JSONDecoder().decode(Reply.self, from: data)
+        switch (response as? HTTPURLResponse)?.statusCode {
+        case 200: return reply?.corrected ?? 0
+        // A receiver from before corrections answers every unknown path this way.
+        case 404 where reply?.error == "Not found": throw CorrectionError.receiverTooOld
+        default: throw CorrectionError.refused(reply?.error ?? "the receiver refused it")
+        }
+    }
+
     private func get(_ path: String) async throws -> Data {
         guard let settings = ReceiverSettings.load() else { throw URLError(.userAuthenticationRequired) }
         var request = URLRequest(url: settings.baseURL.appendingPathComponent(path))
@@ -155,6 +174,18 @@ final class SummaryStore: ObservableObject {
         let (data, response) = try await session.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
         return data
+    }
+}
+
+enum CorrectionError: LocalizedError {
+    case receiverTooOld
+    case refused(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .receiverTooOld: return "the receiver needs updating before it can correct summaries."
+        case .refused(let reason): return reason
+        }
     }
 }
 
@@ -265,6 +296,7 @@ struct DayDetailView: View {
     @State private var showTranscript = false
     @State private var loading = true
     @State private var query = ""
+    @State private var fixing: NameFix?
     @AppStorage("dayNewestFirst") private var newestFirst = true
     @Environment(\.textScale) private var textScale
 
@@ -344,6 +376,9 @@ struct DayDetailView: View {
                             }
                         }
                     } label: { Image(systemName: "list.bullet.indent") }
+                    // Highlighting a name offers the same panel; this one starts empty.
+                    Button("Fix a name", systemImage: "character.book.closed") { fixing = NameFix(heard: "") }
+                        .help("Fix a misheard name")
                     if !shown.isEmpty {
                         ShareLink(item: shown) { Image(systemName: "square.and.arrow.up") }
                     }
@@ -365,6 +400,17 @@ struct DayDetailView: View {
             loading = false
         }
         .onChange(of: showTranscript) { _, _ in blocks = Block.parse(shown) }
+        .environment(\.fixName, NameFixAction { fixing = NameFix(heard: $0) })
+        .sheet(item: $fixing) { fix in
+            NameFixView(heard: fix.heard, date: day.date, summary: document?.summary) {
+                // Show the corrected summary now rather than at the next sync.
+                if let latest = await store.document(for: day.date) {
+                    document = latest
+                    blocks = Block.parse(shown)
+                }
+            }
+            .sheetSize(width: 460, height: 440)
+        }
     }
 
     private var headings: [Block] {
@@ -527,21 +573,20 @@ struct BlockView: View {
             .padding(.top, level == 1 ? 0 : 12)
 
         case .paragraph(let text):
-            Self.styled(text).font(.reading(.body, scale: scale)).lineSpacing(5 * scale)
+            ReadingText(markdown: text, style: .body)
 
         case .bullet(let text):
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("•").font(.reading(.body, scale: scale)).foregroundStyle(.secondary)
-                Self.styled(text).font(.reading(.body, scale: scale)).lineSpacing(5 * scale)
+                ReadingText(markdown: text, style: .body)
             }
 
         case .entry(let time, let text):
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(time)
                     .font(.reading(.caption, scale: scale).monospacedDigit()).foregroundStyle(.secondary)
                     .frame(width: 42 * scale, alignment: .leading)
-                    .padding(.top, 3)
-                Self.styled(text).font(.reading(.callout, scale: scale)).lineSpacing(4 * scale)
+                ReadingText(markdown: text, style: .callout, lineSpacing: 4)
             }
 
         case .table(let rows):

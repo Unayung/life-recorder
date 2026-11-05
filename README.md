@@ -200,7 +200,7 @@ The reference deployment runs the receiver, the Linux meeting capture and the su
 
 The app's "Read your days" page lists every recorded date and opens one day at a time, at its latest section. It reads `GET /v1/days` and `GET /v1/days/<YYYY-MM-DD>` over the same pinned connection the uploads use, and keeps every day it has loaded on the phone, so a day stays readable while the receiver is offline. A search box looks through the whole archive.
 
-A day shows its summary when one exists, otherwise the raw transcript. The glossary can be edited from the phone as well (`GET`/`PUT /v1/vocabulary`), entry by entry or as plain text.
+A day shows its summary when one exists, otherwise the raw transcript. The glossary can be edited from the phone as well (`GET`/`PUT /v1/vocabulary`), entry by entry or as plain text. A misheard name can also be fixed where you read it: highlight it in a day and choose Fix Name (right-click on a Mac). The name goes into the glossary, and that day's summary can be corrected on the spot (`POST /v1/days/<date>/correction`), which also drops the summarizer's `(?)` after it.
 
 The pairing token can read transcripts, summaries and the glossary, not just upload audio. Treat it as a key to the transcript itself.
 

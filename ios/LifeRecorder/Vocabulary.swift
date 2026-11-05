@@ -99,6 +99,92 @@ struct Glossary {
     }
 }
 
+/// Fixing a name from what was read: which entry it belongs to, and teaching the file a new mishearing.
+extension Glossary {
+    struct Entry {
+        let section: Section
+        let row: Row
+        var name: String { row.cells.first ?? "" }
+    }
+
+    /// The column listing what the transcriber writes instead, such as 常見誤轉.
+    static func heardColumn(of section: Section) -> Int? {
+        guard section.columns.count > 1 else { return nil }
+        return section.columns.firstIndex {
+            $0.contains("誤") || ["heard", "mishear", "sounds"].contains(where: $0.lowercased().contains)
+        } ?? section.columns.count - 1
+    }
+
+    /// The first column that is neither the name nor the mishearings, such as 角色 or 說明.
+    static func noteColumn(of section: Section) -> Int? {
+        let heard = heardColumn(of: section)
+        return section.columns.indices.dropFirst().first { $0 != heard }
+    }
+
+    static func mishearings(_ cell: String) -> [String] {
+        cell.components(separatedBy: CharacterSet(charactersIn: ",，、"))
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private static func same(_ a: String, _ b: String) -> Bool {
+        a.trimmingCharacters(in: .whitespaces).caseInsensitiveCompare(b.trimmingCharacters(in: .whitespaces)) == .orderedSame
+    }
+
+    /// The entry spelled exactly this way.
+    func entry(named name: String) -> Entry? {
+        for section in sections where section.hasTable {
+            if let row = section.rows.first(where: { Self.same($0.cells.first ?? "", name) }) {
+                return Entry(section: section, row: row)
+            }
+        }
+        return nil
+    }
+
+    /// The entry this text is, or is a known mishearing of.
+    func entry(matching text: String) -> Entry? {
+        if let entry = entry(named: text) { return entry }
+        for section in sections where section.hasTable {
+            guard let column = Self.heardColumn(of: section) else { continue }
+            if let row = section.rows.first(where: { row in
+                column < row.cells.count && Self.mishearings(row.cells[column]).contains { Self.same($0, text) }
+            }) { return Entry(section: section, row: row) }
+        }
+        return nil
+    }
+
+    /// Whether the file already knows that `heard` means `name`.
+    func knows(heard: String, means name: String) -> Bool {
+        guard let entry = entry(named: name) else { return false }
+        guard !Self.same(heard, name) else { return true }
+        guard let column = Self.heardColumn(of: entry.section), column < entry.row.cells.count else { return false }
+        return Self.mishearings(entry.row.cells[column]).contains { Self.same($0, heard) }
+    }
+
+    /// Record that `heard` is how `name` gets transcribed: added to that name's entry when it has
+    /// one, otherwise a new entry in `sectionTitle`. Returns whether the file changed.
+    @discardableResult
+    mutating func learn(heard: String, means name: String, note: String = "", in sectionTitle: String) -> Bool {
+        let heard = heard.trimmingCharacters(in: .whitespaces)
+        let name = name.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, !knows(heard: heard, means: name) else { return false }
+        if let entry = entry(named: name) {
+            guard !heard.isEmpty, let column = Self.heardColumn(of: entry.section) else { return false }
+            var row = entry.row
+            while row.cells.count <= column { row.cells.append("") }
+            row.cells[column] = (Self.mishearings(row.cells[column]) + [heard]).joined(separator: ", ")
+            update(row, columns: entry.section.columns.count)
+            return true
+        }
+        guard let section = sections.first(where: { $0.hasTable && $0.title == sectionTitle }) else { return false }
+        var cells = Array(repeating: "", count: section.columns.count)
+        cells[0] = name
+        if let column = Self.heardColumn(of: section), !heard.isEmpty, !Self.same(heard, name) { cells[column] = heard }
+        if let column = Self.noteColumn(of: section) { cells[column] = note }
+        add(cells, to: section)
+        return true
+    }
+}
+
 @MainActor
 final class VocabularyStore: ObservableObject {
     static let shared = VocabularyStore()
@@ -408,5 +494,174 @@ struct GlossaryTextView: View {
                 }
                 .task { text = store.glossary.text }
         }
+    }
+}
+
+/// A name highlighted while reading a day, on its way to the glossary.
+struct NameFix: Identifiable {
+    let id = UUID()
+    let heard: String
+
+    /// Longer than this, a highlight is a sentence rather than a name.
+    static let longest = 40
+
+    /// What was highlighted, without the spaces, punctuation and "(?)" caught along with it.
+    static func clean(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+    }
+}
+
+/// Fix a name from the day it was misheard in: the glossary learns the mishearing, so later
+/// clips come out right, and that day's summary can be corrected where it stands.
+struct NameFixView: View {
+    @ObservedObject private var store = VocabularyStore.shared
+    @Environment(\.dismiss) private var dismiss
+    let date: String
+    let summary: String?
+    let onCorrected: () async -> Void
+    @State private var heard: String
+    @State private var name = ""
+    @State private var note = ""
+    @State private var sectionTitle = ""
+    @State private var fixSummary = true
+    @State private var saving = false
+    @State private var problem: String?
+
+    init(heard: String, date: String, summary: String?, onCorrected: @escaping () async -> Void) {
+        _heard = State(initialValue: heard)
+        self.date = date
+        self.summary = summary
+        self.onCorrected = onCorrected
+    }
+
+    private var trimmedHeard: String { heard.trimmingCharacters(in: .whitespaces) }
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var tables: [Glossary.Section] { store.glossary.sections.filter(\.hasTable) }
+    private var existing: Glossary.Entry? { store.glossary.entry(named: trimmedName) }
+    private var confirming: Bool { trimmedHeard.caseInsensitiveCompare(trimmedName) == .orderedSame }
+
+    /// Places in the summary this would change: every mention, or only the "(?)" when the name was right.
+    private var places: Int {
+        guard let summary, !trimmedHeard.isEmpty, !trimmedName.isEmpty else { return 0 }
+        let name = NSRegularExpression.escapedPattern(for: trimmedHeard)
+        let pattern = confirming ? name + "[ \\t]?[(（][?？][)）]" : name
+        return (try? NSRegularExpression(pattern: pattern))?
+            .numberOfMatches(in: summary, range: NSRange(summary.startIndex..., in: summary)) ?? 0
+    }
+
+    private var outcome: String {
+        guard !trimmedName.isEmpty else { return "How summaries should spell it from now on." }
+        if store.glossary.knows(heard: trimmedHeard, means: trimmedName) {
+            return confirming || trimmedHeard.isEmpty ? "Already in Names and terms."
+                : "Names and terms already turns “\(trimmedHeard)” into \(trimmedName)."
+        }
+        if let existing {
+            return "Adds “\(trimmedHeard)” to \(existing.name) in \(existing.section.title)."
+        }
+        return "Not in Names and terms yet, so this starts an entry."
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Heard as") {
+                    TextField("As it was written", text: $heard)
+                        .autocorrectionDisabled()
+                }
+                Section {
+                    TextField("Correct spelling", text: $name)
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                } header: {
+                    Text("Should be")
+                } footer: {
+                    Text(outcome)
+                }
+                if existing == nil && !trimmedName.isEmpty && !tables.isEmpty {
+                    Section("New entry") {
+                        Picker("List under", selection: $sectionTitle) {
+                            ForEach(tables) { Text($0.title).tag($0.title) }
+                        }
+                        if let section = tables.first(where: { $0.title == sectionTitle }),
+                           let column = Glossary.noteColumn(of: section) {
+                            TextField(section.columns[column], text: $note)
+                        }
+                    }
+                }
+                if places > 0 {
+                    Section {
+                        Toggle("Also correct this day's summary", isOn: $fixSummary)
+                    } footer: {
+                        Text(confirming ? "Removes the (?) after it in \(places) \(places == 1 ? "place" : "places")."
+                             : "Replaces “\(trimmedHeard)” in \(places) \(places == 1 ? "place" : "places").")
+                    }
+                }
+                if let problem {
+                    Section { Text(problem).foregroundStyle(.orange) }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Fix a name")
+            .inlineTitle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if saving {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Button("Save") { Task { await save() } }
+                            .disabled(trimmedName.isEmpty || store.busy)
+                    }
+                }
+            }
+            .task {
+                prefill()  // From the copy saved here, so the form is ready at once.
+                await store.load()
+                prefill()
+            }
+        }
+    }
+
+    /// Start from what the glossary already says about the highlighted text.
+    private func prefill() {
+        if name.isEmpty, !trimmedHeard.isEmpty, let entry = store.glossary.entry(matching: trimmedHeard) {
+            name = entry.name
+        }
+        if !tables.contains(where: { $0.title == sectionTitle }) {
+            sectionTitle = tables.first?.title ?? ""
+        }
+    }
+
+    private func save() async {
+        saving = true
+        problem = nil
+        defer { saving = false }
+        let heard = trimmedHeard, name = trimmedName
+        // A failed earlier attempt left the edit here unsent, so send it even when nothing new was learnt.
+        if store.glossary.learn(heard: heard, means: name, note: note, in: sectionTitle) || store.failed {
+            await store.save()
+            if store.conflict != nil {
+                // The desktop changed the file since it was read; add this one entry to its copy.
+                store.keepTheirs()
+                store.glossary.learn(heard: heard, means: name, note: note, in: sectionTitle)
+                await store.save()
+            }
+            if store.failed {
+                problem = store.status
+                return
+            }
+        }
+        if fixSummary && places > 0 {
+            do {
+                _ = try await SummaryStore.shared.correct(date: date, heard: heard, name: name)
+                await onCorrected()
+            } catch {
+                problem = "Saved in Names and terms, but the summary was not corrected: \(error.localizedDescription)"
+                return
+            }
+        }
+        dismiss()
     }
 }

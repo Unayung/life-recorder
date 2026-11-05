@@ -39,7 +39,8 @@ targets:
       - LifeRecorderMac
       # The reading half of the phone app. Recording on a Mac stays with desktop/capture_mac.
       - path: LifeRecorder
-        includes: [PinnedTransport.swift, Platform.swift, Reading.swift, Storage.swift, Vocabulary.swift]
+        includes: [PinnedTransport.swift, Platform.swift, Reading.swift, ReadingText.swift, Storage.swift,
+                   Vocabulary.swift]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.unayung.liferecorder.mac

@@ -44,7 +44,18 @@ extension Font {
     /// A text style at the reader's scale.
     static func reading(_ style: TextStyle, scale: CGFloat) -> Font {
         #if os(macOS)
-        // Text styles have one fixed size each on a Mac, so the larger size is asked for outright.
+        return .system(size: NSFont.reading(style, scale: scale).pointSize, weight: style == .headline ? .bold : .regular)
+        #else
+        return .system(style)
+        #endif
+    }
+}
+
+#if os(macOS)
+extension NSFont {
+    /// A text style at the reader's scale. Text styles have one fixed size each on a Mac,
+    /// so the larger size is asked for outright.
+    static func reading(_ style: Font.TextStyle, scale: CGFloat) -> NSFont {
         let appKit: NSFont.TextStyle = switch style {
         case .title2: .title2
         case .title3: .title3
@@ -54,13 +65,11 @@ extension Font {
         case .caption: .caption1
         default: .body
         }
-        return .system(size: NSFont.preferredFont(forTextStyle: appKit).pointSize * scale,
-                       weight: style == .headline ? .bold : .regular)
-        #else
-        return .system(style)
-        #endif
+        return .systemFont(ofSize: preferredFont(forTextStyle: appKit).pointSize * scale,
+                           weight: style == .headline ? .bold : .regular)
     }
 }
+#endif
 
 extension View {
     /// A pushed page's title, kept small. Only iOS has a large one to avoid.

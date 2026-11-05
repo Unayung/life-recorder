@@ -181,6 +181,38 @@ class ReceiverTests(unittest.TestCase):
         for path in ("/v1/days/2026-13-45", "/v1/days/../../etc/passwd", "/v1/days/2026-09-10.md"):
             self.assertEqual(self.get(path)[0], 404, path)
 
+    def correct(self, date, body, token=None):
+        client = http.client.HTTPConnection(*self.server.server_address, timeout=5)
+        client.request("POST", f"/v1/days/{date}/correction", json.dumps(body).encode(),
+                       {"Authorization": "Bearer " + (token or self.inbox.token)})
+        response = client.getresponse()
+        result = response.status, json.loads(response.read())
+        client.close()
+        return result
+
+    def test_a_name_fixed_while_reading_is_respelled_in_that_days_summary(self):
+        summary = self.inbox.summaries / "2026-09-10.md"
+        summary.write_text("# 2026-09-10\n\n- Alice、陳偉（?）接待學生\n- 陳偉 (?) 下週再談；陳偉負責\n", encoding="utf-8")
+        status, result = self.correct("2026-09-10", {"heard": "陳偉", "correct": "陳瑋"})
+        self.assertEqual((status, result["corrected"]), (200, 3))
+        self.assertEqual(summary.read_text(encoding="utf-8"),
+                         "# 2026-09-10\n\n- Alice、陳瑋接待學生\n- 陳瑋 下週再談；陳瑋負責\n")
+        # Confirming a name as already spelled only drops the question mark.
+        summary.write_text("- Model7 (?) 效果好\n", encoding="utf-8")
+        self.assertEqual(self.correct("2026-09-10", {"heard": "Model7", "correct": "Model7"})[0], 200)
+        self.assertEqual(summary.read_text(encoding="utf-8"), "- Model7 效果好\n")
+
+    def test_correction_needs_the_token_a_summary_and_one_short_name(self):
+        summary = self.inbox.summaries / "2026-09-10.md"
+        summary.write_text("陳偉\n", encoding="utf-8")
+        self.assertEqual(self.correct("2026-09-10", {"heard": "陳偉", "correct": "x"}, token="wrong")[0], 401)
+        self.assertEqual(self.correct("2026-09-11", {"heard": "陳偉", "correct": "陳瑋"})[0], 404)
+        self.assertEqual(self.correct("..%2F..%2Fetc", {"heard": "陳偉", "correct": "陳瑋"})[0], 404)
+        for bad in ({"heard": "", "correct": "陳瑋"}, {"heard": "陳偉", "correct": "a\n# b"},
+                    {"heard": "陳偉"}, ["陳偉", "陳瑋"], {"heard": 1, "correct": "陳瑋"}):
+            self.assertEqual(self.correct("2026-09-10", bad)[0], 400, bad)
+        self.assertEqual(summary.read_text(encoding="utf-8"), "陳偉\n")
+
     def test_day_files_and_markers_use_local_capture_time(self):
         inbox = Inbox(Path(self.temp.name) / "taipei", ZoneInfo("Asia/Taipei"))
         tmp = inbox.audio / "clip.upload"

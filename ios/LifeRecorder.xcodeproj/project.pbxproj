@@ -12,13 +12,17 @@
 		18D9714ED62E059843D1A9AC /* RecorderPairing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2AA777304998E217750790 /* RecorderPairing.swift */; };
 		1F2B7EE6A773F6B72AC416FA /* ChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */; };
 		2630F99F1B3A71C858F86398 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF2C0785D509C8CA79FFF6B /* Platform.swift */; };
+		375AEC6C1C78114CE7E25350 /* ReadingTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A98CFEA2E676368FB2DBED68 /* ReadingTextTests.swift */; };
 		49B7E576C31EC0BB95B19780 /* LifeRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F3DBEC2972B9DED3119424 /* LifeRecorderApp.swift */; };
 		4E6A018A3661DD43D5109404 /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741E03E5D6FC0A34C88CEA4D /* Reading.swift */; };
 		54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
 		548DE3A98498B0B10E21540F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 53B3827423B97E0166CF2964 /* Assets.xcassets */; };
+		5EDB8305E437ABECD2BFB3BC /* GlossaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 643E656D1BE0A57B31C19997 /* GlossaryTests.swift */; };
 		608D204380302040F6F27CDE /* Reading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741E03E5D6FC0A34C88CEA4D /* Reading.swift */; };
 		644835340AAF1500241778DF /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E138E288F79C8B5DE281250 /* Storage.swift */; };
+		6BE23CEE166ADEDBFC6EE756 /* ReadingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CFA4CBD65FA4BC29DCF5299 /* ReadingText.swift */; };
 		72F2BF749E91EB59438030C8 /* Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A142BB3D40140B42C9C91EC5 /* Vocabulary.swift */; };
+		7924CFAC707DD3105C3588F4 /* ReadingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CFA4CBD65FA4BC29DCF5299 /* ReadingText.swift */; };
 		8C34593B9CD5B393F7C90C6D /* NativeUploadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A0E11377963676F1DB20DB /* NativeUploadTests.swift */; };
 		908B36241C02AED196BEE2F6 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF2C0785D509C8CA79FFF6B /* Platform.swift */; };
 		AD2DA97AC731BB22F5ACCD48 /* PinnedTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */; };
@@ -57,6 +61,7 @@
 		4912CAE16CD5C6C2B739463D /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
 		53B3827423B97E0166CF2964 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5788338C803ABC3F322E2C05 /* LifeRecorderMacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LifeRecorderMacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		643E656D1BE0A57B31C19997 /* GlossaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryTests.swift; sourceTree = "<group>"; };
 		71CA51A8130E11F903254F74 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		73A0E11377963676F1DB20DB /* NativeUploadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeUploadTests.swift; sourceTree = "<group>"; };
 		741E03E5D6FC0A34C88CEA4D /* Reading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reading.swift; sourceTree = "<group>"; };
@@ -67,9 +72,11 @@
 		93F1329E2C2FBAECB7B7FD74 /* RecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderTests.swift; sourceTree = "<group>"; };
 		979FEA5285A0B5B0F31DCFD4 /* ChunkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkWriter.swift; sourceTree = "<group>"; };
 		989AD68485F84E569D5471F7 /* RecorderPairingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderPairingTests.swift; sourceTree = "<group>"; };
+		9CFA4CBD65FA4BC29DCF5299 /* ReadingText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingText.swift; sourceTree = "<group>"; };
 		A142BB3D40140B42C9C91EC5 /* Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vocabulary.swift; sourceTree = "<group>"; };
 		A631F623B253E7ACA8A7E103 /* LifeRecorderMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeRecorderMacApp.swift; sourceTree = "<group>"; };
 		A68D2699666CB905FC7325D6 /* LifeRecorderMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LifeRecorderMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A98CFEA2E676368FB2DBED68 /* ReadingTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTextTests.swift; sourceTree = "<group>"; };
 		ABF2C0785D509C8CA79FFF6B /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		B35B1754886B3F5500411113 /* Recorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recorder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -85,6 +92,7 @@
 				776DAFF23DC1BF722C1026D0 /* PinnedTransport.swift */,
 				ABF2C0785D509C8CA79FFF6B /* Platform.swift */,
 				741E03E5D6FC0A34C88CEA4D /* Reading.swift */,
+				9CFA4CBD65FA4BC29DCF5299 /* ReadingText.swift */,
 				B35B1754886B3F5500411113 /* Recorder.swift */,
 				1E138E288F79C8B5DE281250 /* Storage.swift */,
 				4912CAE16CD5C6C2B739463D /* UploadManager.swift */,
@@ -107,6 +115,8 @@
 		B83F4E031D7D846B04C0BC47 /* LifeRecorderMacTests */ = {
 			isa = PBXGroup;
 			children = (
+				643E656D1BE0A57B31C19997 /* GlossaryTests.swift */,
+				A98CFEA2E676368FB2DBED68 /* ReadingTextTests.swift */,
 				989AD68485F84E569D5471F7 /* RecorderPairingTests.swift */,
 			);
 			path = LifeRecorderMacTests;
@@ -292,6 +302,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5EDB8305E437ABECD2BFB3BC /* GlossaryTests.swift in Sources */,
+				375AEC6C1C78114CE7E25350 /* ReadingTextTests.swift in Sources */,
 				0AD401481307B9BFBC33EC19 /* RecorderPairingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -305,6 +317,7 @@
 				C79E7B068FAE912465C35DA9 /* PinnedTransport.swift in Sources */,
 				2630F99F1B3A71C858F86398 /* Platform.swift in Sources */,
 				4E6A018A3661DD43D5109404 /* Reading.swift in Sources */,
+				7924CFAC707DD3105C3588F4 /* ReadingText.swift in Sources */,
 				18D9714ED62E059843D1A9AC /* RecorderPairing.swift in Sources */,
 				644835340AAF1500241778DF /* Storage.swift in Sources */,
 				72F2BF749E91EB59438030C8 /* Vocabulary.swift in Sources */,
@@ -320,6 +333,7 @@
 				AD2DA97AC731BB22F5ACCD48 /* PinnedTransport.swift in Sources */,
 				908B36241C02AED196BEE2F6 /* Platform.swift in Sources */,
 				608D204380302040F6F27CDE /* Reading.swift in Sources */,
+				6BE23CEE166ADEDBFC6EE756 /* ReadingText.swift in Sources */,
 				E84B72E8AEAE0DAE896AF8A6 /* Recorder.swift in Sources */,
 				54662EB8B6B32A2F28B52B84 /* Storage.swift in Sources */,
 				066F079475FA4272323846E7 /* UploadManager.swift in Sources */,

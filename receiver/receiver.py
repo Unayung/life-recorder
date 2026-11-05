@@ -26,6 +26,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MAX_UPLOAD = 32 * 1024 * 1024
 MAX_VOCABULARY_BYTES = 256 * 1024
+MAX_CORRECTION_BYTES = 4 * 1024
+# The summarizer marks a name it could not place with "(?)" right after it.
+UNSURE_MARK = r"(?:[ \t]?[(（][?？][)）])?"
 
 
 def atomic_write(path: Path, data: bytes):
@@ -197,6 +200,22 @@ class Inbox:
                            if transcript.is_file() else ""),
         }
 
+    def correct_summary(self, date: str, heard: str, correct: str) -> int | None:
+        """Respell a name throughout one day's summary; None when the day has no summary."""
+        path = self.summaries / (date + ".md")
+        with self.lock:
+            try:
+                text = path.read_text(encoding="utf-8")
+                mode = path.stat().st_mode & 0o777
+            except FileNotFoundError:
+                return None
+            # The reader has settled the name, so the summarizer's question mark after it goes too.
+            fixed, count = re.subn(re.escape(heard) + UNSURE_MARK, lambda _: correct, text)
+            if count:
+                atomic_write(path, fixed.encode("utf-8"))
+                os.chmod(path, mode)
+        return count
+
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -294,6 +313,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.authorized():
             return self.respond(401, {"error": "Unauthorized"})
+        path = urlparse(self.path).path
+        if path.startswith("/v1/days/") and path.endswith("/correction"):
+            return self.correct_day(path.removeprefix("/v1/days/").removesuffix("/correction"))
         tmp = None
         try:
             if not self.path.startswith("/v1/chunks/"):
@@ -342,6 +364,31 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             if tmp:
                 tmp.unlink(missing_ok=True)
+
+    def correct_day(self, date: str):
+        """A name fixed while reading a day: respell it in that day's summary."""
+        try:
+            date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
+        except ValueError:
+            return self.respond(404, {"error": "Not found"})
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 < length <= MAX_CORRECTION_BYTES:
+                raise ValueError("Correction is empty or too large")
+            edit = json.loads(self.rfile.read(length))
+            heard, correct = edit["heard"].strip(), edit["correct"].strip()
+            if not heard or not correct or len(heard) > 200 or len(correct) > 200 \
+                    or any(c in "\r\n" for c in heard + correct):
+                raise ValueError("A name is one short line")
+        except (ValueError, KeyError, TypeError, AttributeError):
+            return self.respond(400, {"error": "Invalid correction"})
+        try:
+            count = self.inbox.correct_summary(date, heard, correct)
+        except OSError:
+            return self.respond(503, {"error": "Storage temporarily unavailable"})
+        if count is None:
+            return self.respond(404, {"error": "No summary for that day"})
+        return self.respond(200, {"date": date, "corrected": count})
 
 
 class Receiver(ThreadingHTTPServer):
